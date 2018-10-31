@@ -22,6 +22,7 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 4.0
 AUTOTHROTTLE_TARGET_CONCURRENCY = 4.0
 HTTPCACHE_EXPIRATION_SECS = 0  # Never expire.
 
+
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'steam (+http://www.yourdomain.com)'
 
