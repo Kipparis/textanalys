@@ -1,9 +1,7 @@
 import utils as ut
 
+input = "Hello <br>My name is Alex.<br>This game is shit<br>-can't pass the tutorial<br>where the fck rbm?"
 
+output = input.replace('<br>', '\n')
 
-with open("text.txt") as file:
-    ut.write_html("temp/games/Project_Hospital/Project_Hospital.html", file.read())
-
-
-
+print(output)

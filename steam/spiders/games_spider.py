@@ -55,12 +55,7 @@ class GamesSpider(scrapy.Spider):
         # Request(request_string % str(app_id), self.parse_game, self.parse_json)
 
         print("^^^^^^^^^^^^^^^^^^^^^^\n")
-        # TODO: Используя json симитировать ajax запросы для паука
-        # https://store.steampowered.com//userreviews/ajaxgetvotes/
-        # TODO: Если это происходит в несколько этапов, узнать основу
-        # страницы и делать в цикле for несколько вызовов
-        # TODO: Скачивать всё в json файл
-        # TODO: Создавать директории для каждой игры для упрощённого просмотра
+
         
 
 # https://store.steampowered.com/appreviews/294100?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1&summary_num_positive_reviews=22733&summary_num_reviews=23376
@@ -87,14 +82,17 @@ class GamesSpider(scrapy.Spider):
 class GameSpider(scrapy.Spider):
 
     comment_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
-    
+
     def __init__(self, name, id):
         self.name = name
         self.id = id
 
+        self.dest = f"data/games/{name}/"
+
+
     def parse_game(self, response):
 
-        filename = f'data/games/{self.name}/{self.name}.html'
+        filename = self.dest + "main_page.html"
         ut.write_html(filename, response.body)
 
         print("\nvvvvvvvvvvvvvvvvvvvvvv")
@@ -108,14 +106,42 @@ class GameSpider(scrapy.Spider):
     def parse_json_comments(self, response):
         print("==============\nstart parsing json\n===============")
 
-        dest = f"data/games/{self.name}/{self.name}_comments.json"
 
         data = json.loads(response.body)
-        ut.write_html(dest, data['html'])
+        ut.write_html(self.dest + "comments.html", data['html'])
 
+        html = data['html'].replace('<br>', '\n') # Заменяем для целостности комента
 
+        selector = Selector(text=html)
+    
+        output = ""
+        comments = selector.css('div.review_box').css('div.content::text').extract()
+        for comment in comments:
+            comment = comment.strip()
+            if not comment:
+                continue    # Пропускаем если строчка пустая
+            output += "\n=============================\n"
+            output += comment
+            output += "\n=============================\n"
         
 
+        #  TODO: Делать цикл for review_box in review_boxes и там парсить и пользователя и игру
+
+        ut.write_html(self.dest + 'comments.txt', output)
+        
         print("==============\nended parsing json\n===============")
 
 
+
+        # TODO: Используя json симитировать ajax запросы для паука
+        # https://store.steampowered.com//userreviews/ajaxgetvotes/
+        # TODO: Если это происходит в несколько этапов, узнать основу
+        # страницы и делать в цикле for несколько вызовов
+        # TODO: Скачивать всё в json файл
+        # TODO: Создавать директории для каждой игры для упрощённого просмотра
+        # TODO: Сделать лог для отслеживания точечных ошибок
+
+
+# <div class="title ellipsis">Не рекомендую</div>
+# 										<div class="hours ellipsis">Проведено в игре: 26.6 ч.</div>
+# 									</a>
