@@ -25,6 +25,7 @@ class GamesSpider(scrapy.Spider):
 
         for gameUrl in response.css('div.tab_content a').xpath('@href').extract():
             game = gameUrl.split("/")[-2]
+            gameId = gameUrl.split("/")[-3]
 
             if ('pack' in game.lower()):
                 continue # Если это какой то пак, тупо скипаем
@@ -33,7 +34,8 @@ class GamesSpider(scrapy.Spider):
             # print("Url is: {}".format(gameUrl))
             # print("vvvvvvvvvvvvvvvvvvvvvvv")
 
-            yield Request(gameUrl, GameSpider.parse_game)
+            gs = GameSpider(game, gameId)
+            yield Request(gameUrl, gs.parse_game)
         # tab_content
         # response.css('img').xpath('@src').extract()
 
@@ -43,7 +45,16 @@ class GamesSpider(scrapy.Spider):
         print("\nvvvvvvvvvvvvvvvvvvvvvv")
         print("Parsing game\t{}\tid\t{}".format(game, app_id))
 
+        request_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
+        filename = f'data/games/{game}/{game}.html'
+        ut.write_html(filename, response.body)
+        
 
+        print("Starting request : ", request_string % str(app_id))
+
+        # Request(request_string % str(app_id), self.parse_game, self.parse_json)
+
+        print("^^^^^^^^^^^^^^^^^^^^^^\n")
         # TODO: Используя json симитировать ajax запросы для паука
         # https://store.steampowered.com//userreviews/ajaxgetvotes/
         # TODO: Если это происходит в несколько этапов, узнать основу
@@ -59,16 +70,7 @@ class GamesSpider(scrapy.Spider):
 # https://store.steampowered.com/appreviews/294100?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1
 # https://store.steampowered.com/appreviews/885810?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1
 
-        request_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
-        filename = f'data/games/{game}/{game}.html'
-        ut.write_html(filename, response.body)
         
-
-        print("Starting request : ", request_string % str(app_id))
-
-        # Request(request_string % str(app_id), self.parse_game, self.parse_json)
-
-        print("^^^^^^^^^^^^^^^^^^^^^^\n")
     
     # def parse_json(self, response):
     #     data = json.loads(response.body)
@@ -82,17 +84,38 @@ class GamesSpider(scrapy.Spider):
 # data = json.loads(response.body)
 # html = data['html']
 
-class GameSpider():
+class GameSpider(scrapy.Spider):
 
     comment_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
+    
+    def __init__(self, name, id):
+        self.name = name
+        self.id = id
 
     def parse_game(self, response):
 
-        game = response.request.url.split('/')[-2]
-        app_id = response.request.url.split('/')[-3]
-        print("\nvvvvvvvvvvvvvvvvvvvvvv")
-        print("Parsing game\t{}\tid\t{}".format(game, app_id))
+        filename = f'data/games/{self.name}/{self.name}.html'
+        ut.write_html(filename, response.body)
 
-        print("Starting request : ", self.comment_string % str(app_id))
+        print("\nvvvvvvvvvvvvvvvvvvvvvv")
+        print("Parsing game\t{}\tid\t{}".format(self.name, self.id))
+
+        print("Starting request : ", self.comment_string % str(self.id))
+        yield Request(self.comment_string % str(self.id), self.parse_json_comments)
 
         print("^^^^^^^^^^^^^^^^^^^^^^\n")
+
+    def parse_json_comments(self, response):
+        print("==============\nstart parsing json\n===============")
+
+        dest = f"data/games/{self.name}/{self.name}_comments.json"
+
+        data = json.loads(response.body)
+        ut.write_html(dest, data['html'])
+
+
+        
+
+        print("==============\nended parsing json\n===============")
+
+
