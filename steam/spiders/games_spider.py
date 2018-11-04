@@ -56,25 +56,6 @@ class GamesSpider(scrapy.Spider):
 
         print("^^^^^^^^^^^^^^^^^^^^^^\n")
 
-        
-
-# https://store.steampowered.com/appreviews/294100?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1&summary_num_positive_reviews=22733&summary_num_reviews=23376
-        # first_comment = response.css('div.leftcol').css('div.content::text').extract_first()
-        # print("First comment is {}".format(first_comment))
-
-# https://store.steampowered.com/appreviews/294100?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1
-# https://store.steampowered.com/appreviews/885810?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1
-
-        
-    
-    # def parse_json(self, response):
-    #     data = json.loads(response.body)
-
-    #     with open('/data/games/keys.json', encoding='utf-8') as fh:
-    #         data = json.load(fh)
-
-    #     print(data)
-
 # >>> fetch("https://store.steampowered.com/appreviews/294100?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1")
 # data = json.loads(response.body)
 # html = data['html']
@@ -106,14 +87,56 @@ class GameSpider(scrapy.Spider):
     def parse_json_comments(self, response):
         print("==============\nstart parsing json\n===============")
 
-
         data = json.loads(response.body)
         ut.write_html(self.dest + "comments.html", data['html'])
 
         html = data['html'].replace('<br>', '\n') # Заменяем для целостности комента
 
         selector = Selector(text=html)
+
+        output = ""
+        review_boxes = selector.css('div.review_box')
+        for review in review_boxes:
+            output += "\n=======================\n"
+
+            # Выводим ник пользователя
+            name = review.css("div.persona_name a::text").extract_first()
+            if name == 'None':
+                continue
+            output += "Reviewer\t{}\n".format(str(name))
+
+            # -- > Находим айди
+            id = review.css('div.avatar a::text').extract_first().split('/')[-2]
+            output += "Id:\t{}\n".format(id)
+
+            output += "=======================\n"
+
+            
+            #     <div class="review_box ">
+		    # <div id="ReviewContentsummary45585376">
+
     
+		    # 	<div class="leftcol">
+		    # 		<div class="avatar">
+		    # 			<a href="https://steamcommunity.com/profiles/76561198073291247/">
+
+            # --> Товаров на аккаунте
+            # <div class="num_owned_games"><a href="https://steamcommunity.com/profiles/76561198073291247/games/?tab=all">Товаров на аккаунте: 64</a></div>
+
+            # --> Количество обзоров
+            # <div class="num_reviews"><a href="https://steamcommunity.com/profiles/76561198073291247/recommended/">Обзоров: 2</a></div>
+
+            # --> Оценка и кол-во часов в игре
+            # <div class="title ellipsis">Не рекомендую</div>
+			# 							<div class="hours ellipsis">Проведено в игре: 26.6 ч.</div>
+			# 						</a>
+
+            # --> Полезный ли
+            # <div class="vote_info">
+			# 		1 пользователь посчитал этот обзор полезным	
+
+        ut.write_html(self.dest + "reviewers.txt", output)
+
         output = ""
         comments = selector.css('div.review_box').css('div.content::text').extract()
         for comment in comments:
@@ -125,8 +148,7 @@ class GameSpider(scrapy.Spider):
             output += "\n=============================\n"
         
 
-        #  TODO: Делать цикл for review_box in review_boxes и там парсить и пользователя и игру
-
+        
         ut.write_html(self.dest + 'comments.txt', output)
         
         print("==============\nended parsing json\n===============")
@@ -140,6 +162,7 @@ class GameSpider(scrapy.Spider):
         # TODO: Скачивать всё в json файл
         # TODO: Создавать директории для каждой игры для упрощённого просмотра
         # TODO: Сделать лог для отслеживания точечных ошибок
+        # TODO: Парсить ревьюверов в json | xml
 
 
 # <div class="title ellipsis">Не рекомендую</div>
