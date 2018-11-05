@@ -1,6 +1,8 @@
 import json
 from scrapy.selector import Selector
 
+from scrapy.selector import HtmlXPathSelector
+
 import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.http import Request
@@ -85,6 +87,8 @@ class GameSpider(scrapy.Spider):
         print("^^^^^^^^^^^^^^^^^^^^^^\n")
 
     def parse_json_comments(self, response):
+        log = ""
+
         print("==============\nstart parsing json\n===============")
 
         data = json.loads(response.body)
@@ -105,22 +109,22 @@ class GameSpider(scrapy.Spider):
                 continue
             output += "Reviewer\t{}\n".format(str(name))
 
-            # -- > Находим айди
-            id = review.css('div.avatar a::text').extract_first().split('/')[-2]
-            output += "Id:\t{}\n".format(id)
+            # # -- > Находим айди"
+            # profileUrl = review.css('div.persona_name a').xpath('@href').extract_first()
+            # output += "url:\t{}\n".format(profileUrl)
+
+            # try:
+            #     profileId = str(profileUrl).split('/')[-2]
+            #     output += "id:\t{}\n".format(profileId)
+            # except IndexError:
+            #     print("\nIndex error in {}\n".format(profileUrl))
+
+            # --> Товаров на аккаунте
 
             output += "=======================\n"
 
             
-            #     <div class="review_box ">
-		    # <div id="ReviewContentsummary45585376">
 
-    
-		    # 	<div class="leftcol">
-		    # 		<div class="avatar">
-		    # 			<a href="https://steamcommunity.com/profiles/76561198073291247/">
-
-            # --> Товаров на аккаунте
             # <div class="num_owned_games"><a href="https://steamcommunity.com/profiles/76561198073291247/games/?tab=all">Товаров на аккаунте: 64</a></div>
 
             # --> Количество обзоров
@@ -152,6 +156,8 @@ class GameSpider(scrapy.Spider):
         ut.write_html(self.dest + 'comments.txt', output)
         
         print("==============\nended parsing json\n===============")
+
+        ut.write_html(self.dest + "doesnt_pass.txt", log)
 
 
 
