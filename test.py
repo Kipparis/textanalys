@@ -1,7 +1,10 @@
 import utils as ut
+import re
 
-input = "Hello <br>My name is Alex.<br>This game is shit<br>-can't pass the tutorial<br>where the fck rbm?"
+classes = ["review_box ", "review_box short", "review_box ", "review_box short"]
 
-output = input.replace('<br>', '\n')
+regular = r"\Areview_box+\s\Z"
 
-print(output)
+for string in classes:
+    if re.match(regular, string):
+        print(regular, "matches", string)

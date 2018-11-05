@@ -1,5 +1,6 @@
 import json
 from scrapy.selector import Selector
+import re
 
 from scrapy.selector import HtmlXPathSelector
 
@@ -87,7 +88,6 @@ class GameSpider(scrapy.Spider):
         print("^^^^^^^^^^^^^^^^^^^^^^\n")
 
     def parse_json_comments(self, response):
-        log = ""
 
         print("==============\nstart parsing json\n===============")
 
@@ -97,27 +97,54 @@ class GameSpider(scrapy.Spider):
         html = data['html'].replace('<br>', '\n') # Заменяем для целостности комента
 
         selector = Selector(text=html)
+        selector.remove_namespaces()
 
         output = ""
-        review_boxes = selector.css('div.review_box')
+        
+        # Используем регулярное выражение для получения только полных комментариев
+        review_boxes = selector.xpath("//div[re:test(@class, '\Areview_box+\s\Z')]")
         for review in review_boxes:
             output += "\n=======================\n"
 
-            # Выводим ник пользователя
-            name = review.css("div.persona_name a::text").extract_first()
-            if name == 'None':
+            if review.css('div.persona_name') is None:
+                print("one review box doesn't contenr persona_name")
+                continue # Если такого не существует пропускаем
+            
+            persona_name = review.css('div.persona_name')
+            
+
+            if persona_name.css('a::text').extract_first() is None:
+                print("one persona name doens't contain a text")
+                name = "i have to search in span"
                 continue
-            output += "Reviewer\t{}\n".format(str(name))
+            else:
+                name = str(persona_name.css('a::text').extract_first())
 
-            # # -- > Находим айди"
-            # profileUrl = review.css('div.persona_name a').xpath('@href').extract_first()
-            # output += "url:\t{}\n".format(profileUrl)
+            if persona_name.css('a::attr(href)').extract_first() is None:
+                print("Persona name doesnt contain href")
+                url = "have to search in another place"
+                continue
+            else:
+                url = str(persona_name.css('a::attr(href)').extract_first())
 
-            # try:
-            #     profileId = str(profileUrl).split('/')[-2]
-            #     output += "id:\t{}\n".format(profileId)
-            # except IndexError:
-            #     print("\nIndex error in {}\n".format(profileUrl))
+            if url != "None" and url is not None:
+                person_id = url.split('/')[-2]
+            else:
+                person_id = "Doesn't exist"
+
+            if review.css('div.num_owned_games a::text').extract_first() is None:
+                print("Persona doesn't have game field")
+                continue
+
+            # Находим подстроку которая содержит цифру
+            num_owned_games = str(review.css('div.num_owned_games a::text').extract_first()).split(' ')[-1]
+
+            output += "Name is\t{}\n".format(name)
+            output += "Url is \t{}\n".format(url)
+            output += "Id is \t{}\n".format(person_id)
+            output += "Owned games \t{}\n".format(num_owned_games)
+
+
 
             # --> Товаров на аккаунте
 
@@ -156,9 +183,6 @@ class GameSpider(scrapy.Spider):
         ut.write_html(self.dest + 'comments.txt', output)
         
         print("==============\nended parsing json\n===============")
-
-        ut.write_html(self.dest + "doesnt_pass.txt", log)
-
 
 
         # TODO: Используя json симитировать ajax запросы для паука
