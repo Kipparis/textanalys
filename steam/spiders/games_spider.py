@@ -107,21 +107,17 @@ class GameSpider(scrapy.Spider):
             output += "\n=======================\n"
 
             if review.css('div.persona_name') is None:
-                print("one review box doesn't contenr persona_name")
                 continue # Если такого не существует пропускаем
-            
+
             persona_name = review.css('div.persona_name')
             
-
             if persona_name.css('a::text').extract_first() is None:
-                print("one persona name doens't contain a text")
                 name = "i have to search in span"
                 continue
             else:
                 name = str(persona_name.css('a::text').extract_first())
 
             if persona_name.css('a::attr(href)').extract_first() is None:
-                print("Persona name doesnt contain href")
                 url = "have to search in another place"
                 continue
             else:
@@ -133,38 +129,85 @@ class GameSpider(scrapy.Spider):
                 person_id = "Doesn't exist"
 
             if review.css('div.num_owned_games a::text').extract_first() is None:
-                print("Persona doesn't have game field")
+                num_owned_games = "Didn't find"
                 continue
+            else:
+                num_owned_games = str(review.css('div.num_owned_games a::text').extract_first()).split(' ')[-1]
 
-            # Находим подстроку которая содержит цифру
-            num_owned_games = str(review.css('div.num_owned_games a::text').extract_first()).split(' ')[-1]
-
-            output += "Name is\t{}\n".format(name)
-            output += "Url is \t{}\n".format(url)
-            output += "Id is \t{}\n".format(person_id)
-            output += "Owned games \t{}\n".format(num_owned_games)
+            if review.css('div.num_reviews a::text').extract_first() is None:
+                num_reviews = "Didn't find"
+                continue
+            else:
+                num_reviews = review.css('div.num_reviews a::text').extract_first().split(' ')[-1]
 
 
+            if review.xpath('.//div[contains(@class, "title ellipsis")]/text()').extract_first() is None:
+                grade = "Didn't find"
+                continue
+            else:
+                grade = review.xpath('.//div[contains(@class, "title ellipsis")]/text()').extract_first()
 
-            # --> Товаров на аккаунте
+            if review.xpath('.//div[contains(@class, "hours ellipsis")]/text()').extract_first() is None:
+                hours = "Didn't find"
+                continue
+            else:
+                hours = review.xpath('.//div[contains(@class, "hours ellipsis")]/text()').extract_first()
+                hours = hours.split(' ')[-2].replace('.', '')
 
-            output += "=======================\n"
+            if review.css('div.vote_info::text').extract_first() is None:
+                num_useful = "Didn't find"
+                num_funny = "Didn't find"
+                continue
+            else:
+                useful = "Not found"
+                funny = "Not found"
 
+                num_useful = '0'
+                num_funny = '0'
+
+                num = re.compile(r'[0-9]+\.?[0-9]*')
+
+                votes_info = review.css('div.vote_info::text').extract()
+                
+                for _ in votes_info:
+                    votes = _.splitlines()
+                    for vote in votes:
+                        if 'полезным' in vote:
+                            useful = vote.strip()
+                            num_useful = num.findall(useful)[0].strip()
+                        elif 'забавным' in vote:
+                            funny = vote.strip()
+                            num_funny = num.findall(funny)[0].strip()                    
+                        
+
+                # votes = vote_info.splitlines()
+
+
+                # for vote in votes:
+                    # if 'полезным' in vote:
+                    #     useful = vote.strip()
+                    # elif 'забавным' in vote:
+                    #     funny = vote.strip()
+
+
+
+
+            output += "Name\tis:\t{}\n".format(name)
+            output += "Url\tis:\t{}\n".format(url)
+            output += "Id \tis:\t{}\n".format(person_id)
+            output += "Owned games:\t{}\n".format(num_owned_games)
+            output += "Num reviews:\t{}\n".format(num_reviews)
+            output += "Grade\tis:\t{}\n".format(grade)
+            output += "Ingame hours:\t{}\n".format(hours)
             
+            output += "People think it helpful:\t{}\n".format(num_useful)
+            output += "People think it funny:\t\t{}\n".format(num_funny)
 
-            # <div class="num_owned_games"><a href="https://steamcommunity.com/profiles/76561198073291247/games/?tab=all">Товаров на аккаунте: 64</a></div>
 
-            # --> Количество обзоров
-            # <div class="num_reviews"><a href="https://steamcommunity.com/profiles/76561198073291247/recommended/">Обзоров: 2</a></div>
+            # Сам текст сообщения
 
-            # --> Оценка и кол-во часов в игре
-            # <div class="title ellipsis">Не рекомендую</div>
-			# 							<div class="hours ellipsis">Проведено в игре: 26.6 ч.</div>
-			# 						</a>
+            output += "=======================\n"           
 
-            # --> Полезный ли
-            # <div class="vote_info">
-			# 		1 пользователь посчитал этот обзор полезным	
 
         ut.write_html(self.dest + "reviewers.txt", output)
 
