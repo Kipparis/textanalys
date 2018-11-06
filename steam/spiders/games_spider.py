@@ -9,6 +9,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.http import Request
 
 import utils as ut
+from comments import Comments
 
 class GamesSpider(scrapy.Spider):
     name = "games"
@@ -32,38 +33,20 @@ class GamesSpider(scrapy.Spider):
 
             if ('pack' in game.lower()):
                 continue # Если это какой то пак, тупо скипаем
-            
-            # print("Found game: {}".format(game))
-            # print("Url is: {}".format(gameUrl))
-            # print("vvvvvvvvvvvvvvvvvvvvvvv")
+
 
             gs = GameSpider(game, gameId)
+            
+            # comments = Comments()
+            # gs.comments.append(comments)
+            
             yield Request(gameUrl, gs.parse_game)
-        # tab_content
-        # response.css('img').xpath('@src').extract()
 
-    def parse_game(self, response):
-        game = response.request.url.split('/')[-2]
-        app_id = response.request.url.split('/')[-3]
-        print("\nvvvvvvvvvvvvvvvvvvvvvv")
-        print("Parsing game\t{}\tid\t{}".format(game, app_id))
-
-        request_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
-        filename = f'data/games/{game}/{game}.html'
-        ut.write_html(filename, response.body)
-        
-
-        print("Starting request : ", request_string % str(app_id))
-
-        # Request(request_string % str(app_id), self.parse_game, self.parse_json)
-
-        print("^^^^^^^^^^^^^^^^^^^^^^\n")
-
-# >>> fetch("https://store.steampowered.com/appreviews/294100?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1")
-# data = json.loads(response.body)
-# html = data['html']
 
 class GameSpider(scrapy.Spider):
+    comments = [] # Один элемент который comments
+    comm = Comments()
+    comments.append(comm)
 
     comment_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
 
@@ -146,6 +129,10 @@ class GameSpider(scrapy.Spider):
                 continue
             else:
                 grade = review.xpath('.//div[contains(@class, "title ellipsis")]/text()').extract_first()
+                if grade == "Рекомендую":
+                    grade = "1"
+                else:
+                    grade = "0"
 
             if review.xpath('.//div[contains(@class, "hours ellipsis")]/text()').extract_first() is None:
                 hours = "Didn't find"
@@ -190,6 +177,11 @@ class GameSpider(scrapy.Spider):
                     #     funny = vote.strip()
 
 
+            if review.css('div.content::text').extract_first() is None:
+                text = "None"
+                continue
+            else:
+                text = review.css('div.content::text').extract_first()
 
 
             output += "Name\tis:\t{}\n".format(name)
@@ -203,8 +195,12 @@ class GameSpider(scrapy.Spider):
             output += "People think it helpful:\t{}\n".format(num_useful)
             output += "People think it funny:\t\t{}\n".format(num_funny)
 
+            output += "Text:\n{}\n".format(text)
 
-            # Сам текст сообщения
+            
+            self.comments[0].add_comments(self.comments[0], 
+                                text, num_owned_games, num_reviews, grade,
+                                hours, num_useful, num_funny)
 
             output += "=======================\n"           
 
@@ -236,6 +232,8 @@ class GameSpider(scrapy.Spider):
         # TODO: Создавать директории для каждой игры для упрощённого просмотра
         # TODO: Сделать лог для отслеживания точечных ошибок
         # TODO: Парсить ревьюверов в json | xml
+
+    
 
 
 # <div class="title ellipsis">Не рекомендую</div>
