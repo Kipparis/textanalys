@@ -12,7 +12,7 @@ class Comments:
     def __init__(self):
         print("Initing comments")
 
-    def add_comments(self, text, owned, reviews, 
+    def add_comment(self, text, owned, reviews, 
                     grade, ingame_hours, helpful, funny):
         
         self.count += 1
@@ -38,3 +38,9 @@ class Comments:
         print("Funny:\n{}".format(self.funny))
         
         # print("Comments:\n{}".format(self.texts))
+
+    def parse_data(self):
+
+        # TODO: Создаём датасеты и проверяем что везде всё поровну
+
+        print("#" * 10, "Parsing data", "#" * 10)
