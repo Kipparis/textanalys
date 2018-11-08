@@ -10,10 +10,13 @@ crawl = 0
 
 for arg in sys.argv:
     if arg[0] == "-":
+        command = arg[1:]
         # Это какая то команда
-        if arg[1:] == "crawl":
+        if command == "crawl":
             print("Scrapy crawl games")
             crawl = 1
+        if command == "log":
+            Comments.log = True
 
 # Если параметр crawl был задан, мы сначала всё скрапим 
 # И только потом возвращаемся в код
@@ -24,4 +27,10 @@ else:
 
 print("\n===============\nvvvvvvvvvvvvvvvv\n")
 print("Startring processing")
+
+Comments.parse_data(Comments)
+# Представляем текст в виде вектора признаков
+# для каждого текста указываем тональность (уже есть)
+# Выбрать алгоритм классификации текста
+
 print("\n^^^^^^^^^^^^^^^\n================")

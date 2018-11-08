@@ -3,19 +3,14 @@
 import utils as ut
 import re
 
-strings = ["\t\t\t\t\tПользователей, посчитавших этот обзор полезным: 199\t\t\t\t\t\t\t\t\t\t\t", 
-            "\t\t\t\t\tПользователей, посчитавших этот обзор полезным: 64\t\t\t\t\t\t\t\t\t\t", 
-            "1 пользователь посчитал этот обзор забавным", 
-            "\t\t\t\t\tПользователей, посчитавших этот обзор полезным: 6\t\t\t\t\t\t\t\t\t\t\t\t\t\t"]
+from collections import Counter
 
-numbers = ['\t\tasbalsd: 123\t\t', '\t\t\tasdas: 1\t\t', '\t\t1 asdasd\t\t', '\t\t\t1231 asdfa\t\t\t']
+data = "make this make that make something else".split(" ")
+# Создаём объект класса каунтер и передаём ему как аргумент массив
 
-positive = r"полезным"
-funny = r"забавным"
+cntr = Counter(data)
 
-num = re.compile(r'[0-9]+\.?[0-9]*')
+print(cntr)
 
-for number in numbers:
-    print(num.findall(number), number)
 
 print("ended")
