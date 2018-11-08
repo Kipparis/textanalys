@@ -13,11 +13,14 @@ from comments import Comments
 
 
 # TODO: Добавить список в главный класс
+# TODO: Сделать управление программой из главного класса, т.е. либо закачивать новые данные затем использовать их
+# либо сразу использовать готовый файл
 class GamesSpider(scrapy.Spider):
     name = "games"
 
     start_urls = [
-        'https://store.steampowered.com/explore/new/'
+        'https://store.steampowered.com/explore/new/',
+        'https://store.steampowered.com/genre/Free%20to%20Play/'
     ]
 
     def parse(self, response):
@@ -45,6 +48,7 @@ class GamesSpider(scrapy.Spider):
         print("\n\noutputting values \n\n")
         Comments.ouput_values(Comments)
         Comments.parse_data(Comments)
+        Comments.save_values(Comments)
 
 class GameSpider:
     comm = Comments()
@@ -76,6 +80,7 @@ class GameSpider:
         print("==============\nstart parsing json\n===============")
 
         num = re.compile(r'[0-9]+\.?[0-9]*') # Регулярное выражение для определения числа
+
 
         data = json.loads(response.body)
         ut.write_html(self.dest + "comments.html", data['html'])
@@ -119,6 +124,8 @@ class GameSpider:
                 continue
             else:
                 num_owned_games = str(review.css('div.num_owned_games a::text').extract_first()).split(' ')[-1]
+                num_owned_games = num_owned_games.replace(',', '')
+                num_owned_games = num_owned_games.replace('.', '')
 
             if review.css('div.num_reviews a::text').extract_first() is None:
                 num_reviews = "Didn't find"
@@ -127,6 +134,8 @@ class GameSpider:
                 num_reviews_text = review.css('div.num_reviews a::text').extract_first().strip()
                 if num.match(num_reviews_text):
                     num_reviews = (num.findall(num_reviews_text))[0].strip()
+                    num_reviews = num_reviews.replace(',', '')
+                    num_reviews = num_reviews.replace('.', '')
                 else:
                     num_reviews = "0"    
 
@@ -147,6 +156,7 @@ class GameSpider:
             else:
                 hours = review.xpath('.//div[contains(@class, "hours ellipsis")]/text()').extract_first()
                 hours = hours.split(' ')[-2].replace('.', '')
+                hours = hours.replace(',', '')
 
             if review.css('div.vote_info::text').extract_first() is None:
                 num_useful = "Didn't find"
@@ -192,10 +202,6 @@ class GameSpider:
             
             output += "People think it helpful:\t{}\n".format(num_useful)
             output += "People think it funny:\t\t{}\n".format(num_funny)
-
-            # output += "Review text:\t{}\n".format(num_reviews_text)
-            # output += "Review text:\t{}\n".format(num.match(num_reviews_text))
-            # output += "Num reviews:\t{}\n".format(num.findall(num_reviews_text)[0])
 
             # output += "Text:\n{}\n".format(text)
 
