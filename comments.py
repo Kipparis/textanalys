@@ -1,4 +1,6 @@
 import csv
+import numpy as np
+from scipy import sparse
 
 # Для более быстрого написания в файл
 import utils as ut
@@ -20,7 +22,8 @@ class Comments:
 
     delta_tl_idf_values = []
 
-
+    target_names = set()
+    
     owned = []
     reviews = []
     grade = []
@@ -143,13 +146,53 @@ class Comments:
             print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
             comm.delete_useless()
 
-        # Подсчитываем для каждого коммента значения слов в тексте
+        # Создаём массив таргет_нэймс
+        # Подсчитываем кол-во разных слов
+        for comm in self.comments:
+            for feature in comm.features:
+                Comments.target_names.add(feature)
+
+        print("Comments.target_names len:\n{}".format(len(Comments.target_names)))
+        Comments.data = np.zeros((len(Comments.comments), len(Comments.target_names)))
+        print("Data shape:\n{}".format(Comments.data.shape))
+
+        # Подсчитываем значения фичей внутри каждого коммента
         for comm in self.comments:
             print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
             comm.count_values()
 
+        for comm_ind in range(0, len(self.comments)):
+            comm = self.comments[comm_ind]
+            for key, value in comm.values.items():
+                # print("Comment num: {}".format(comm_ind))
+                # print("Key: {}\tValue: {}".format(key, value))
+                # print("Index in list(self.taget_names): {}".format(list(self.target_names).index(key)))
+                # Каждая строчка - комментарий, столбец - ищем индекс в множестве всех фич
+                self.data[comm_ind, (list(self.target_names).index(key))] = value
+            # # Заполняем по строчке ndarray
+
+        Comments.s_data = sparse.csr_matrix(self.data)
+        print(Comments.s_data)
+
+        data_dest = "data/features.npy"
+        print("Saving data to file {}".format(data_dest))
+        np.save(data_dest, self.data)
+        
+        sparce_data_dest = "data/s_features.npy"
+        np.save(sparce_data_dest, Comments.s_data)
+
+        print("Ended saving")
 
         print("#" * 10, "Parsing data", "#" * 10)
+        # Строчка - итем, столбец - фича            
+
+        # Проходимся по каждому комментарию и создаём n-мерный массив с признаками
+
+        # # Подсчитываем для каждого коммента значения слов в тексте
+
+    def load_data_from_file(self):
+        Comments.data = np.load('data/features.npy')
+        Comments.s_data = np.load('data/s_features.npy')
 
     def count_word_in_positive(self, feature):
         if self.log: print("Counting word in positive ", feature)
@@ -195,7 +238,7 @@ class Comment:
 
         self.features = []
         self.tf_idf = {}
-        self.values = []
+        self.values = {}
 
     def make_vector(self):
         # Создание вектора признаков
@@ -231,9 +274,7 @@ class Comment:
 
     def count_values(self):    
         for feature in self.features:
-            self.values.append(
-                self.cnt[feature] * log10((len(Comments.negative_comments) * Comments.count_word_in_positive(Comments, feature)) / (len(Comments.positive_comments) * Comments.count_word_in_negative(Comments, feature)))
-            )
+            self.values[feature] = self.cnt[feature] * log10((len(Comments.negative_comments) * Comments.count_word_in_positive(Comments, feature)) / (len(Comments.positive_comments) * Comments.count_word_in_negative(Comments, feature)))
 
     # TODO: Создать возможность удаления ненужных N-грамм
     def delete_useless(self):

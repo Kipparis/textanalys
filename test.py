@@ -3,14 +3,16 @@
 import utils as ut
 import re
 
+import numpy as np
+
 from collections import Counter
 
-data = "make this make that make something else".split(" ")
-# Создаём объект класса каунтер и передаём ему как аргумент массив
+arr = np.load('data/s_features.npy')
 
-cntr = Counter(data)
+print(arr)
 
-print(cntr)
+
+# print(arr[0])
 
 
 print("ended")
