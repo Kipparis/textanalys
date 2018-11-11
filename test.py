@@ -7,9 +7,11 @@ import numpy as np
 
 from collections import Counter
 
-arr = np.load('data/s_features.npy')
+arr = [1, 2, 3, 4, 5, 6, 7]
 
-print(arr)
+np_arr = np.array(arr)
+
+print(np_arr.shape)
 
 
 # print(arr[0])

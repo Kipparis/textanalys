@@ -1,6 +1,13 @@
 import csv
+
 import numpy as np
 from scipy import sparse
+
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn import svm
+from sklearn.externals import joblib # Для сохранения
+# from sklearn.naive_bayes import MultinomialNB
 
 # Для более быстрого написания в файл
 import utils as ut
@@ -17,6 +24,8 @@ class Comments:
     log = False
 
     comments = []
+
+
     positive_comments = []
     negative_comments = []
 
@@ -112,18 +121,57 @@ class Comments:
     # Создать массив положительных комментариев
     # Массив отрицательных цомментариев
 
+    # If the number of features is much greater than the number of samples, 
+    # avoid over-fitting in choosing Kernel functions 
+    # and regularization term is crucial.
     def parse_data(self):
+        X = self.data
+        y = self.grades
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=2)
+        print("X_train.shape: {}\ty_train.shape: {}\nX_test.shape: {}\ty_test.shape: {}".format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
+
+        reg = 1.0 # Параметр регуляризации SVM
+        kernel = 'poly'
+        print("C value is: {}".format(reg))
+        clf = svm.SVC(kernel=kernel, degree=6, C=reg, gamma="scale", random_state=2)
+
+        scores = cross_val_score(clf, X, y, cv=10, n_jobs=-1)
+        print(scores)
+        print("Score.mean:\t{}".format(scores.mean()))
+        print("Scores.std:\t{}".format(scores.std() * 2))
+        print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+
+        final_model = clf.fit(X, y)
+        Comments.model = final_model
+
+        # Сохраняем модель
+        filename = 'data/svc_model.sav'
+        print("Saving model into:\t{}".format(filename))
+        joblib.dump(final_model, filename)
+
+        # clf = MultinomialNB().fit(X_train_tfidf, twenty_train.target) # наивный байесовский классификатор
+
+        # print("Точность обучения: {}".format(np.mean(y_test == y_pred)))
+
+
+    def process_data(self):
+        grades = []
         # Создаём классы комментариев
         for raw in zip(self.grade, self.owned, self.reviews,
                 self.ingame_hours, self.helpful, self.funny, self.texts):
             # Передаём в новый коммент текст и оценку
             comm = Comment(raw[0], raw[-1])
             self.comments.append(comm)
+            grades.append(comm.grade)
             if raw[0] == "1":
                 Comments.positive_comments.append(comm)
             else:
                 Comments.negative_comments.append(comm)
-            
+
+        Comments.grades = np.array(grades)
+        np.save("data/grades.npy", Comments.grade)
+        
         # Подсчитываем для каждого коммента вектор признаков
         for comm in self.comments:
             comm.make_vector()
@@ -162,6 +210,7 @@ class Comments:
             comm.count_values()
 
         for comm_ind in range(0, len(self.comments)):
+            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
             comm = self.comments[comm_ind]
             for key, value in comm.values.items():
                 # print("Comment num: {}".format(comm_ind))
@@ -184,15 +233,14 @@ class Comments:
         print("Ended saving")
 
         print("#" * 10, "Parsing data", "#" * 10)
-        # Строчка - итем, столбец - фича            
-
-        # Проходимся по каждому комментарию и создаём n-мерный массив с признаками
-
-        # # Подсчитываем для каждого коммента значения слов в тексте
-
+        
     def load_data_from_file(self):
         Comments.data = np.load('data/features.npy')
         Comments.s_data = np.load('data/s_features.npy')
+        Comments.grades = np.load('data/grades.npy')
+
+    def load_model(self):
+        Comments.model = joblib.load('data/svc_model.sav')
 
     def count_word_in_positive(self, feature):
         if self.log: print("Counting word in positive ", feature)
