@@ -79,3 +79,4 @@ https://machinelearningmastery.com/save-load-machine-learning-models-python-scik
 + Создать класс settings.py откуда будут браться все коэффиценты:  
     - tf-idf коэффиценты для удаления  
     - кэффиценты модели для обучения  
++ Создать файл где у каждого слова будет delta td idf значения, для того чтобы внедрить pipe line для проверки вводимых данных  

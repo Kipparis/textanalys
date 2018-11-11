@@ -1,3 +1,14 @@
 {
-    "python.pythonPath": "${workspaceFolder}/venv/bin/python"
+    "python.pythonPath": "${workspaceFolder}/venv/bin/python",
+
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/*/**": true,
+        "**/venv/**": true,
+        "venv/**": true,
+        "venv/*": true,
+        "venv/": true,
+        "venv": true
+      }
 }

@@ -1,9 +1,9 @@
 import os, sys
-
-
     
 def write_html(path, html):
-        
+
+    print("writing html")    
+    
     pathDir = path.split('/')
 
     name = pathDir[-1]

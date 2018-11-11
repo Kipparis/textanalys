@@ -21,7 +21,9 @@ class GamesSpider(scrapy.Spider):
     start_urls = [
         'https://store.steampowered.com/explore/new/',
         'https://store.steampowered.com/genre/Free%20to%20Play/',
-        'https://store.steampowered.com/'
+        'https://store.steampowered.com/search/?filter=topsellers',
+        'https://store.steampowered.com/vr/'
+        'https://store.steampowered.com/',
     ]
 
     def parse(self, response):
@@ -48,6 +50,7 @@ class GamesSpider(scrapy.Spider):
     def closed(self, reason):
         print("\n\noutputting values \n\n")
         Comments.ouput_values(Comments)
+        print("Saving values")
         Comments.save_values(Comments)
         # Comments.parse_data(Comments)
 
