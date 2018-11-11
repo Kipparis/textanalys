@@ -128,15 +128,15 @@ class Comments:
         X = self.data
         y = self.grades
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=2)
-        print("X_train.shape: {}\ty_train.shape: {}\nX_test.shape: {}\ty_test.shape: {}".format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=2)
+        # print("X_train.shape: {}\ty_train.shape: {}\nX_test.shape: {}\ty_test.shape: {}".format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
 
         reg = 1.0 # Параметр регуляризации SVM
         kernel = 'poly'
         print("C value is: {}".format(reg))
         clf = svm.SVC(kernel=kernel, degree=6, C=reg, gamma="scale", random_state=2)
 
-        scores = cross_val_score(clf, X, y, cv=10, n_jobs=-1)
+        scores = cross_val_score(clf, X, y, cv=5, n_jobs=-1)
         print(scores)
         print("Score.mean:\t{}".format(scores.mean()))
         print("Scores.std:\t{}".format(scores.std() * 2))

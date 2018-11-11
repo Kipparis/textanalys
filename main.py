@@ -46,18 +46,17 @@ if process == 1:
 else:
     Comments.load_data_from_file(Comments)
 
+print("\n===============\nvvvvvvvvvvvvvvvv\n")
+print("Shape of data is:\n{}".format(Comments.data.shape))
+print("Startring parsing")
+
 if bm == 1:
     Comments.parse_data(Comments)
 else:
     Comments.load_model(Comments)
 
-
-print("\n===============\nvvvvvvvvvvvvvvvv\n")
-print("Shape of data is:\n{}".format(Comments.data.shape))
-print("Startring parsing")
-
-input_string = ''
-input(input_string)
+# input_string = ''
+# input(input_string)
 
 # X = Comments.data
 # y = Comments.grades
@@ -71,4 +70,4 @@ print("X shape: {}\ty shape: {}\n".format(Comments.data.shape, Comments.grades.s
 
 print("\n^^^^^^^^^^^^^^^\n================")
 
-print("program runed {} seconds".format(time.time() - start_time))
+print("program raned {} seconds".format(time.time() - start_time))
