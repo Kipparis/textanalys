@@ -156,6 +156,8 @@ class Comments:
 
 
     def process_data(self):
+        print("#" * 10, "Processing data", "#" * 10)
+
         grades = []
         # Создаём классы комментариев
         for raw in zip(self.grade, self.owned, self.reviews,
@@ -230,9 +232,7 @@ class Comments:
         sparce_data_dest = "data/s_features.npy"
         np.save(sparce_data_dest, Comments.s_data)
 
-        print("Ended saving")
-
-        print("#" * 10, "Parsing data", "#" * 10)
+        print("Ended saving features in files:\n{}\n{}".format(data_dest, sparce_data_dest))
         
     def load_data_from_file(self):
         Comments.data = np.load('data/features.npy')

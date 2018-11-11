@@ -1,12 +1,13 @@
-import json
-from scrapy.selector import Selector
-import re
-
-from scrapy.selector import HtmlXPathSelector
-
 import scrapy
-from scrapy.crawler import CrawlerProcess
 from scrapy.http import Request
+from scrapy.crawler import CrawlerProcess
+from scrapy.selector import Selector
+from scrapy.selector import HtmlXPathSelector
+from scrapy.linkextractors import LinkExtractor
+from scrapy.contrib.spiders import Rule
+
+import re
+import json
 
 import utils as ut
 from comments import Comments
@@ -19,12 +20,16 @@ class GamesSpider(scrapy.Spider):
     name = "games"
 
     start_urls = [
-        'https://store.steampowered.com/explore/new/',
-        'https://store.steampowered.com/genre/Free%20to%20Play/',
-        'https://store.steampowered.com/search/?filter=topsellers',
-        'https://store.steampowered.com/vr/'
-        'https://store.steampowered.com/',
+        # 'https://store.steampowered.com/explore/new/',
+        # 'https://store.steampowered.com/genre/Free%20to%20Play/',
+        # 'https://store.steampowered.com/search/?filter=topsellers',
+        # 'https://store.steampowered.com/vr/',
+        # 'https://store.steampowered.com/genre/Early%20Access/',
+        'https://store.steampowered.com/games/'
     ]
+
+    # Создаём правило перехода по кнопке
+    # Rules = (Rule(LinkExtractor(allow=(), restrict_xpaths=('//div[@class="paged_items_paging_controls"]/span[@id="NewReleases_btn_next"]',)), callback="parse", follow= True),)
 
     def parse(self, response):
         print("\n\nparse opened\n\n")
@@ -42,9 +47,11 @@ class GamesSpider(scrapy.Spider):
             if ('pack' in game.lower()):
                 continue # Если это какой то пак, тупо скипаем
 
-
             gs = GameSpider(game, gameId)            
             yield Request(gameUrl, gs.parse_game)
+
+        # Если находим стрелочку вправо, жмём на неё и опять вызываем эту же функцию
+
 
 
     def closed(self, reason):
