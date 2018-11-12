@@ -1,5 +1,8 @@
+# Для сохранения
 import csv
+import json
 
+# Для машинного обучения
 import numpy as np
 from scipy import sparse
 
@@ -11,6 +14,8 @@ from sklearn.externals import joblib # Для сохранения
 
 # Для более быстрого написания в файл
 import utils as ut
+# для того чтобы имортить переменный настроек
+import settings
 
 from collections import Counter
 from math import log10
@@ -32,7 +37,11 @@ class Comments:
     delta_tl_idf_values = []
 
     target_names = set()
-    
+
+    # 'имя фичи' : {'all': $всего, 'pos': $в_позитивных, 'neg': $в_негативных}
+    features_count = {}
+
+
     owned = []
     reviews = []
     grade = []
@@ -174,9 +183,29 @@ class Comments:
         Comments.grades = np.array(grades)
         np.save("data/grades.npy", Comments.grade)
         
+        # Создаём словарь, где каждой строке соответстует упорядоченная тройка,
+        # где первое значение - сколько раз слов встречается во всех комментариях,
+        # второе - сколько раз в положительных
+        # третье - сколько раз в отрицательных
+        # в дальнейшем, можно использовать эти значения просто вычитая единицу из значения
+
+        count = 1
+        if ut.path_exists('data/words_count.json'):
+            with open('data/words_count.json', 'r') as file:
+                print("Loading words_count from json")
+                Comments.features_count = json.load(file)
+                count = 0
+
         # Подсчитываем для каждого коммента вектор признаков
         for comm in self.comments:
+            print("Comm {} from {}\tCounting words in all text".format(self.comments.index(comm), len(self.comments)))
             comm.make_vector()
+            # Подсчитываем кол-во фичей в этом комменте и добавляем в общую кучу
+            if count: comm.count()
+
+        if not ut.path_exists('data/words_count.json'):
+            with open('data/words_count.json', 'w') as file:
+                json.dump(Comments.features_count, file)
 
         #####################
         # TODO: С помощью tf-idf удалять стоп-слова
@@ -184,35 +213,61 @@ class Comments:
         # tf-idf для всех комментариев
         #####################
         for comm in self.comments:
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
+            print("Comm {} from {}\tCounting tf-idf".format(self.comments.index(comm), len(self.comments)))
             comm.count_tf_idf()
             # pprint(comm.tf_idf)
 
+        
         # Выводим бесполезные слова
         ut.write_html("data/tf-idf-useless.txt", Comment.tf_idf_words)
+        print("OUTPUTED DATA/TF-IDF USELESS")
 
         # Удаляем бесполезные униграммы, т.к. биграммы всё равно остаются
         for comm in self.comments:
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
+            print("Comm {} from {}\tDeleting useless".format(self.comments.index(comm), len(self.comments)))
             comm.delete_useless()
 
         # Создаём массив таргет_нэймс
         # Подсчитываем кол-во разных слов
         for comm in self.comments:
+            print("Comm {} from {}\tCreating target names".format(self.comments.index(comm), len(self.comments)))
             for feature in comm.features:
                 Comments.target_names.add(feature)
 
         print("Comments.target_names len:\n{}".format(len(Comments.target_names)))
-        Comments.data = np.zeros((len(Comments.comments), len(Comments.target_names)))
+        # Comments.data = np.zeros((len(Comments.comments), len(Comments.target_names)))
+        # Создаём разряженную матрицу
+        Comments.data = sparse.lil_matrix((len(Comments.comments), len(Comments.target_names)))
         print("Data shape:\n{}".format(Comments.data.shape))
 
         # Подсчитываем значения фичей внутри каждого коммента
         for comm in self.comments:
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
+            print("Comm {} from {}\tCounting delta_tf-idf".format(self.comments.index(comm), len(self.comments)))
             comm.count_values()
 
+            # Создаю массив длинной в кол-во фичей и там
+
+        # for i in range(0, len(self.comments)):
+        #     print("Comm {} from {}\tMaking rows".format(i, len(self.comments)))            
+        #     comment = self.comments[i]
+        #     row = np.zeros(shape=(1,len(Comments.target_names)))
+
+        #     # Заполняем одну строчку
+        #     for feature in comment.features:
+        #         row[0, (list(self.target_names).index(feature))] = comment.values[feature]
+            
+        #     if i == 0:
+        #         data_set = row
+        #     else:
+        #         data_set = np.r_[data_set, row]
+
+        # print("Data_set shape: {}".format(data_set.shape))
+
+        # self.data = data_set
+
+
         for comm_ind in range(0, len(self.comments)):
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
+            print("Comm {} from {}\tCreating matrix".format(self.comments.index(comm), len(self.comments)))
             comm = self.comments[comm_ind]
             for key, value in comm.values.items():
                 # print("Comment num: {}".format(comm_ind))
@@ -288,6 +343,24 @@ class Comment:
         self.tf_idf = {}
         self.values = {}
 
+    def count(self):
+        # Побавляем фичи из этой фигни в общую стопку
+        for feature in self.features:
+            # Если этой фичи ещё нет в общем списке, добавляем с нулевыми показателями
+            if feature not in Comments.features_count:
+                Comments.features_count[feature] = {
+                    'all': 0, 'pos': 0, 'neg': 0, 'num_all': 0, 'num_pos': 0, 'num_neg': 0
+                }
+            # Затем добавляем значения
+            Comments.features_count[feature]['all'] += self.cnt[feature]
+            Comments.features_count[feature]['num_all'] += 1
+            if self.grade == 1:
+                Comments.features_count[feature]['pos'] += self.cnt[feature]
+                Comments.features_count[feature]['num_pos'] += 1
+            else:
+                Comments.features_count[feature]['neg'] += self.cnt[feature]
+                Comments.features_count[feature]['num_neg'] += 1
+
     def make_vector(self):
         # Создание вектора признаков
         self.features = self.text.split(' ')
@@ -313,23 +386,25 @@ class Comment:
             count_in_text = self.cnt[feature]
             tf = count_in_text / len(self.text)
 
-            idf = log10(len(Comments.comments) / Comments.count_word_in_comments(Comments, feature))
+            # idf = log10(len(Comments.comments) / Comments.count_word_in_comments(Comments, feature))
+            idf = log10(len(Comments.comments) / Comments.features_count[feature]['num_all'])
             self.tf_idf[feature] = tf * idf
 
-            # if tf * idf < 0.00025: print("Feature:\t{}\ttf-idf:\t{}".format(feature, tf * idf))
-            if tf * idf < 0.00025: Comment.tf_idf_words += str(feature) + "\n"
+            # Если тф-идф ниже границы, убираем ( а так записываем в файл для подсчёта )
+            if tf * idf < settings.TF_IDF_EDGE: Comment.tf_idf_words += str(feature) + "\n"
 
 
     def count_values(self):    
         for feature in self.features:
-            self.values[feature] = self.cnt[feature] * log10((len(Comments.negative_comments) * Comments.count_word_in_positive(Comments, feature)) / (len(Comments.positive_comments) * Comments.count_word_in_negative(Comments, feature)))
+            if Comments.features_count[feature]['pos'] == 0: Comments.features_count[feature]['pos'] = 0.1
+            if Comments.features_count[feature]['neg'] == 0: Comments.features_count[feature]['neg'] = 0.1
+            self.values[feature] = self.cnt[feature] * log10((len(Comments.negative_comments) * Comments.features_count[feature]['pos']) / (len(Comments.positive_comments) * Comments.features_count[feature]['neg']))
 
     # TODO: Создать возможность удаления ненужных N-грамм
     def delete_useless(self):
         for key, value in self.tf_idf.items():
-            if value < 0.00025:
+            if value < settings.TF_IDF_EDGE:
                 print("Deleting feature: '{}' with value {}".format(key, value))
                 self.features.remove(key)
-
 
 # TODO: Посмотреть можно ли убрать предлоги используя tf-idf

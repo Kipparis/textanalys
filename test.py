@@ -4,17 +4,21 @@ import utils as ut
 import re
 
 import numpy as np
+from scipy import sparse
 
 from collections import Counter
 
-arr = [1, 2, 3, 4, 5, 6, 7]
+from pprint import pprint
 
-np_arr = np.array(arr)
-
-print(np_arr.shape)
+import settings
 
 
-# print(arr[0])
+arr = np.array([[1,2,3]])
 
+arr = np.r_[arr, np.array([[4,5,6]])]
+arr = np.r_[arr, np.array([[7,8,9]])]
+
+print(arr)
+# print('tf-idf edge: {}'.format(settings.TF_IDF_EDGE))
 
 print("ended")

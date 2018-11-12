@@ -5,6 +5,9 @@ from scrapy.selector import Selector
 from scrapy.selector import HtmlXPathSelector
 from scrapy.linkextractors import LinkExtractor
 from scrapy.contrib.spiders import Rule
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors import LinkExtractor
+from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor
 
 import re
 import json
@@ -13,78 +16,64 @@ import utils as ut
 from comments import Comments
 
 
-# TODO: Добавить список в главный класс
-# TODO: Сделать управление программой из главного класса, т.е. либо закачивать новые данные затем использовать их
-# либо сразу использовать готовый файл
-class GamesSpider(scrapy.Spider):
+class GamesSpider(CrawlSpider):
+
     name = "games"
+    allowed_domains = ["store.steampowered.com"]
 
     start_urls = [
-        # 'https://store.steampowered.com/explore/new/',
-        # 'https://store.steampowered.com/genre/Free%20to%20Play/',
-        # 'https://store.steampowered.com/search/?filter=topsellers',
-        # 'https://store.steampowered.com/vr/',
-        # 'https://store.steampowered.com/genre/Early%20Access/',
         'https://store.steampowered.com/games/'
     ]
 
-    # Создаём правило перехода по кнопке
-    # Rules = (Rule(LinkExtractor(allow=(), restrict_xpaths=('//div[@class="paged_items_paging_controls"]/span[@id="NewReleases_btn_next"]',)), callback="parse", follow= True),)
+    rules = (
+        # Заходим в теги на главной странице и переходим на дальнейшие страницы
+        Rule(
+            LxmlLinkExtractor(
+                restrict_css=('div.contenthub_popular_tags','a.pagebtn')
+            ),
+            # Используем колбэк как страницу, т.к. надо на каждой новой странице
+            # находить игры
+            callback="parse_page",
+            follow=True
+        ),
+        # Заходим в сами игры
+        Rule(
+            LxmlLinkExtractor(
+                restrict_css=(
+                    'div#search_result_container',
 
-    def parse(self, response):
-        print("\n\nparse opened\n\n")
-        page = response.url.split("/")[-2] # Получается имя игры
-        filename = 'data/%s.html' % page
-        ut.write_html(filename, response.body)
-        self.log('Saved file %s' % filename)
+                ),
+                allow=(r'.*/app/.*')
+            ),
+            # Используем колбэк как страницу, т.к. надо на каждой новой странице
+            # находить игры
+            callback="parse_game",
+            follow=True
+        ),
+    )
 
-        print("-------------------------")
+    gameCount = 0
 
-        for gameUrl in response.css('div.tab_content a').xpath('@href').extract():
-            game = gameUrl.split("/")[-2]
-            gameId = gameUrl.split("/")[-3]
-
-            if ('pack' in game.lower()):
-                continue # Если это какой то пак, тупо скипаем
-
-            gs = GameSpider(game, gameId)            
-            yield Request(gameUrl, gs.parse_game)
-
-        # Если находим стрелочку вправо, жмём на неё и опять вызываем эту же функцию
-
-
-
-    def closed(self, reason):
-        print("\n\noutputting values \n\n")
-        Comments.ouput_values(Comments)
-        print("Saving values")
-        Comments.save_values(Comments)
-        # Comments.parse_data(Comments)
-
-class GameSpider:
-    comm = Comments()
-
-    comment_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
-
-    def __init__(self, name, id):
-        self.name = name
-        self.id = id
-
-        self.dest = f"data/games/{name}/"
-
+    # Основная страница тега
+    def parse_page(self, response):
+        print('\n\nProcessing..\n' + response.url)
 
     def parse_game(self, response):
+        GamesSpider.gameCount += 1
 
-        filename = self.dest + "main_page.html"
-        ut.write_html(filename, response.body)
+        # Парсим игру
 
-        print("\nvvvvvvvvvvvvvvvvvvvvvv")
-        print("Parsing game\t{}\tid\t{}".format(self.name, self.id))
+        # Находим имя
+        name = response.url.split('/')[-2]
+        # Находим id
+        game_id = response.url.split('/')[-3]
+        print('\n\nParsing game: {}\tWith id: {}\n'.format(name, game_id))
 
-        print("Starting request : ", self.comment_string % str(self.id))
-        yield Request(self.comment_string % str(self.id), self.parse_json_comments)
+        # Находим кол-во комментариев к игре
+        self.comment_string = "https://store.steampowered.com/appreviews/%s?start_offset=0&day_range=30&start_date=-1&end_date=-1&date_range_type=all&filter=summary&language=russian&l=russian&review_type=all&purchase_type=all&review_beta_enabled=1"
+        self.dest = f"data/games/{name}/"
+        yield Request(self.comment_string % str(game_id), self.parse_json_comments)
 
-        print("^^^^^^^^^^^^^^^^^^^^^^\n")
 
     def parse_json_comments(self, response):
 
@@ -253,3 +242,11 @@ class GameSpider:
         # TODO: Парсить ревьюверов в json | xml
 
     
+
+    def closed(self, reason):
+        print('=' * 5, GamesSpider.gameCount, '=' * 5)
+        print("\n\noutputting values \n\n")
+        Comments.ouput_values(Comments)
+        print("Saving values")
+        Comments.save_values(Comments)
+        # Comments.parse_data(Comments)
