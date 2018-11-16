@@ -32,6 +32,7 @@ class Comments:
     delta_tl_idf_values = []
 
     target_names = set()
+    target_names_dict = {}
     
     owned = []
     reviews = []
@@ -199,6 +200,14 @@ class Comments:
         for comm in self.comments:
             for feature in comm.features:
                 Comments.target_names.add(feature)
+
+                
+        # for name in Comments.target_names:
+        #     letter = name[0]
+        #     if letter in Comments.target_names_dict:
+        #         pass
+        #     else:
+        #         Comments.target_names_dict[letter] = list(Comments.target_names).index(name)
 
         print("Comments.target_names len:\n{}".format(len(Comments.target_names)))
         Comments.data = np.zeros((len(Comments.comments), len(Comments.target_names)))
