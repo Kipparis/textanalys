@@ -14,12 +14,17 @@ import settings
 
 from utils import Watcher
 
-length = 10000
-disp = Watcher(length)
-for index in range(0, length):
-    disp.display_load(index, "counting target_names indexes")
+arr = np.array([
+    [1,2,3],
+    [4,5,6],
+    [6,7,8]
+])
 
+row = np.array([[1,2,3]])
 
+new_arr = np.r_[arr, row]
+
+print(new_arr)
 # print('tf-idf edge: {}'.format(settings.TF_IDF_EDGE))
 
 print("ended")

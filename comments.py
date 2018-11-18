@@ -296,6 +296,40 @@ class Comments:
         print("Ended saving file")
 
 
+        # Создаём строчку фичей у каждого коммента
+        data = np.array([[]])
+        for _ in range(0, len(Comments.comments)):
+            comment = Comments.comments[_]
+            row = np.zeros(shape=(1, target_names_len))
+            
+            # для каждой фичи в комменте, находим её индекс в таргет нэймс ( уже упорядоченном )
+            for feature in comment.features:
+                if feature != "":
+                    first_letter = feature[0]
+                    
+                    # Находим индекс начала поиска через словарь
+                    start_index = Comments.target_names_dict[first_letter].split[':'][0]
+                    end_index = Comments.target_names_dict[first_letter].split[':'][-1]
+
+                    # Ищем индекс слова
+                    for i in range(start_index, end_index):
+                        if Comments.target_names[i] == feature:
+                            # Нашли индекс слова, добавляем его значение в соответствующую ячейку
+                            row[1, i] = comment.values[feature]
+
+            # Добавили все фичи в строку
+            # Объединяем с предыдущими
+            if _ == 0: data = row
+            else: 
+                data = np.r_[data, row]
+
+
+        # Создан массив дата
+        data_sparce = sparse.lil_matrix(data)
+
+        print("Data shape:\t{}".format(data.shape))
+        print("Sparce marix:\n{}".format(data_sparce))
+
         # print("Comments.target_names len:\n{}".format(len(Comments.target_names)))
         # # Comments.data = np.zeros((len(Comments.comments), len(Comments.target_names)))
         # # Создаём разряженную матрицу
