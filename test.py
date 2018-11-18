@@ -4,17 +4,22 @@ import utils as ut
 import re
 
 import numpy as np
+from scipy import sparse
 
 from collections import Counter
 
-arr = [1, 2, 3, 4, 5, 6, 7]
+from pprint import pprint
 
-np_arr = np.array(arr)
+import settings
 
-print(np_arr.shape)
+from utils import Watcher
+
+length = 10000
+disp = Watcher(length)
+for index in range(0, length):
+    disp.display_load(index, length, "counting target_names indexes")
 
 
-# print(arr[0])
-
+# print('tf-idf edge: {}'.format(settings.TF_IDF_EDGE))
 
 print("ended")

@@ -39,8 +39,8 @@ if crawl == 1:
 else:
     Comments.load_values(Comments)
 
+
 if process == 1:
-    # TODO: поменять название функции на process
     Comments.process_data(Comments)
     bm = 1
 else:
@@ -50,17 +50,17 @@ print("\n===============\nvvvvvvvvvvvvvvvv\n")
 print("Shape of data is:\n{}".format(Comments.data.shape))
 print("Startring parsing")
 
-if bm == 1:
-    Comments.parse_data(Comments)
-else:
-    Comments.load_model(Comments)
+# if bm == 1:
+#     Comments.parse_data(Comments)
+# else:
+#     Comments.load_model(Comments)
 
 # input_string = ''
 # input(input_string)
 
 # X = Comments.data
 # y = Comments.grades
-print("X shape: {}\ty shape: {}\n".format(Comments.data.shape, Comments.grades.shape))
+# print("X shape: {}\ty shape: {}\n".format(Comments.data.shape, Comments.grades.shape))
 
 
 

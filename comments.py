@@ -1,5 +1,8 @@
+# Для сохранения
 import csv
+import json
 
+# Для машинного обучения
 import numpy as np
 from scipy import sparse
 
@@ -11,6 +14,8 @@ from sklearn.externals import joblib # Для сохранения
 
 # Для более быстрого написания в файл
 import utils as ut
+# для того чтобы имортить переменный настроек
+import settings
 
 from collections import Counter
 from math import log10
@@ -29,11 +34,17 @@ class Comments:
     positive_comments = []
     negative_comments = []
 
-    delta_tl_idf_values = []
+    # {"фича": значение}
+    delta_tf_idf_values = {}
 
-    target_names = set()
+    target_names = []
     target_names_dict = {}
     
+
+    # 'имя фичи' : {'all': $всего, 'pos': $в_позитивных, 'neg': $в_негативных}
+    features_count = {}
+
+
     owned = []
     reviews = []
     grade = []
@@ -157,6 +168,8 @@ class Comments:
 
 
     def process_data(self):
+        print("#" * 10, "Processing data", "#" * 10)
+
         grades = []
         # Создаём классы комментариев
         for raw in zip(self.grade, self.owned, self.reviews,
@@ -173,9 +186,30 @@ class Comments:
         Comments.grades = np.array(grades)
         np.save("data/grades.npy", Comments.grade)
         
+        # Создаём словарь, где каждой строке соответстует упорядоченная тройка,
+        # где первое значение - сколько раз слов встречается во всех комментариях,
+        # второе - сколько раз в положительных
+        # третье - сколько раз в отрицательных
+        # в дальнейшем, можно использовать эти значения просто вычитая единицу из значения
+
+        count = 1
+        if ut.path_exists('data/words_count.json'):
+            with open('data/words_count.json', 'r') as file:
+                print("Loading words_count from json")
+                Comments.features_count = json.load(file)
+                count = 0
+
         # Подсчитываем для каждого коммента вектор признаков
+        # from utils import Watcher следить за прогрессом
         for comm in self.comments:
+            print("Comm {} from {}\tMaking vector".format(self.comments.index(comm), len(self.comments)))
             comm.make_vector()
+            # Подсчитываем кол-во фичей в этом комменте и добавляем в общую кучу
+            if count: comm.count()
+
+        if not ut.path_exists('data/words_count.json'):
+            with open('data/words_count.json', 'w') as file:
+                json.dump(Comments.features_count, file)
 
         #####################
         # TODO: С помощью tf-idf удалять стоп-слова
@@ -183,65 +217,143 @@ class Comments:
         # tf-idf для всех комментариев
         #####################
         for comm in self.comments:
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
+            print("Comm {} from {}\tCounting tf-idf".format(self.comments.index(comm), len(self.comments)))
+            # Считаем и сразу удаляем ненужные слова
             comm.count_tf_idf()
             # pprint(comm.tf_idf)
 
+        
         # Выводим бесполезные слова
         ut.write_html("data/tf-idf-useless.txt", Comment.tf_idf_words)
+        print("OUTPUTED DATA/TF-IDF USELESS")
 
-        # Удаляем бесполезные униграммы, т.к. биграммы всё равно остаются
-        for comm in self.comments:
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
-            comm.delete_useless()
+        # # Удаляем бесполезные униграммы, т.к. биграммы всё равно остаются
+        # for comm in self.comments:
+        #     print("Comm {} from {}\tDeleting useless".format(self.comments.index(comm), len(self.comments)))
+        #     comm.delete_useless()
 
         # Создаём массив таргет_нэймс
         # Подсчитываем кол-во разных слов
+        target_names = set()
         for comm in self.comments:
+            print("Comm {} from {}\tCreating target names".format(self.comments.index(comm), len(self.comments)))
             for feature in comm.features:
-                Comments.target_names.add(feature)
+                target_names.add(feature)
 
-                
-        # for name in Comments.target_names:
-        #     letter = name[0]
-        #     if letter in Comments.target_names_dict:
-        #         pass
-        #     else:
-        #         Comments.target_names_dict[letter] = list(Comments.target_names).index(name)
+        Comments.target_names = sorted(list(target_names))
 
-        print("Comments.target_names len:\n{}".format(len(Comments.target_names)))
-        Comments.data = np.zeros((len(Comments.comments), len(Comments.target_names)))
-        print("Data shape:\n{}".format(Comments.data.shape))
 
-        # Подсчитываем значения фичей внутри каждого коммента
-        for comm in self.comments:
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
-            comm.count_values()
+        target_names_len = len(Comments.target_names)
+        # Загружаем чтобы не считать всё заново
+        count = 1
+        if ut.path_exists('data/target_names_indexes.json'):
+            with open('data/target_names_indexes.json', 'r') as file:
+                print("Loading target_names_indexes from json")
+                Comments.target_names_dict = json.load(file)
+                count = 0
 
-        for comm_ind in range(0, len(self.comments)):
-            print("Comm {} from {}".format(self.comments.index(comm), len(self.comments)))
-            comm = self.comments[comm_ind]
-            for key, value in comm.values.items():
-                # print("Comment num: {}".format(comm_ind))
-                # print("Key: {}\tValue: {}".format(key, value))
-                # print("Index in list(self.taget_names): {}".format(list(self.target_names).index(key)))
-                # Каждая строчка - комментарий, столбец - ищем индекс в множестве всех фич
-                self.data[comm_ind, (list(self.target_names).index(key))] = value
-            # # Заполняем по строчке ndarray
+        if count:
+            j = 0
+            # Сделать по индексам, и когда нашли конечный индекс сразу смещаться на него -1
+            # Делать без внутреннего цикла, а просто заводить переменную *текущая буква* и когда другая буква не равна ей просто ставить конечный индекс - новое слово
+            for j in range(0, len(Comments.target_names)):
+                name = Comments.target_names[j]
+                if name == '':
+                    continue
+                print("{} from {}\tCounting target_names indexes".format(Comments.target_names.index(name), target_names_len))
+                letter = name[0]
+                if letter not in Comments.target_names_dict:
+                    # Находим индекс последней вхождения фичи на эту букву.
+                    for i in range(Comments.target_names.index(name), len(Comments.target_names)):
+                        print("\n {}'s word in target_names\nSearching for letter: {}\nCurrent feature: {}".format(i, letter, Comments.target_names[i]))
+                        
+                        if Comments.target_names[i][0] != letter:
+                            endEnd = i
+                            print("Start for {} = {}\tend = {}".format(letter, Comments.target_names.index(name),i))
+                            j = i - 1
+                            break
+                    # К словарю добавляем индекс в котором мы встретили это слово (т.к. списочек отсортированный) и индекс конечного вхождения который мы нашли ранее
+                    Comments.target_names_dict[letter] = str(Comments.target_names.index(name)) + ":" + str(endEnd)
 
-        Comments.s_data = sparse.csr_matrix(self.data)
-        print(Comments.s_data)
-
-        data_dest = "data/features.npy"
-        print("Saving data to file {}".format(data_dest))
-        np.save(data_dest, self.data)
+        # Сохраняем то что сейчас написали, т.к. процесс мега трудоёмкий
+        if not ut.path_exists('data/target_names_indexes.json'):
+            with open('data/target_names_indexes.json', 'w') as file:
+                json.dump(Comments.target_names_dict, file)
         
-        sparce_data_dest = "data/s_features.npy"
-        np.save(sparce_data_dest, Comments.s_data)
+        print("Ended saving file")
 
-        print("Ended saving")
 
-        print("#" * 10, "Parsing data", "#" * 10)
+        # print("Comments.target_names len:\n{}".format(len(Comments.target_names)))
+        # # Comments.data = np.zeros((len(Comments.comments), len(Comments.target_names)))
+        # # Создаём разряженную матрицу
+        # Comments.data = sparse.lil_matrix((len(Comments.comments), len(Comments.target_names)))
+        # print("Data shape:\n{}".format(Comments.data.shape))
+
+        # # Загружаем чтобы не считать всё заново
+        # count = 1
+        # if ut.path_exists('data/delta_tf_idf.json'):
+        #     print("Loading delta_tf_idf")
+        #     with open('data/delta_tf_idf.json', 'r') as file:
+        #         print("Loading target_names_indexes from json")
+        #         Comments.delta_tf_idf_values = json.load(file)
+        #         for comm in self.comments:
+        #             comm.load_delta_tf_idf()
+        #         count = 0
+
+        # # Подсчитываем значения фичей внутри каждого коммента
+        # if count:
+        #     for comm in self.comments:
+        #         print("Comm {} from {}\tCounting delta_tf-idf".format(self.comments.index(comm), len(self.comments)))
+        #         comm.count_values()
+
+
+        # # Сохраняем то что сейчас написали, т.к. процесс мега трудоёмкий
+        # if not ut.path_exists('data/delta_tf_idf.json'):
+        #     with open('data/delta_tf_idf.json', 'w') as file:
+        #         json.dump(Comments.delta_tf_idf_values, file)
+        #     # Создаю массив длинной в кол-во фичей и там
+
+        # for i in range(0, len(self.comments)):
+        #     print("Comm {} from {}\tMaking rows".format(i, len(self.comments)))            
+        #     comment = self.comments[i]
+        #     row = np.zeros(shape=(1,len(Comments.target_names)))
+
+        #     # Заполняем одну строчку
+        #     for feature in comment.features:
+        #         row[0, (list(self.target_names).index(feature))] = comment.values[feature]
+            
+        #     if i == 0:
+        #         data_set = row
+        #     else:
+        #         data_set = np.r_[data_set, row]
+
+        # print("Data_set shape: {}".format(data_set.shape))
+
+        # self.data = data_set
+
+
+        # for comm_ind in range(0, len(self.comments)):
+        #     print("Comm {} from {}\tCreating matrix".format(self.comments.index(comm), len(self.comments)))
+        #     comm = self.comments[comm_ind]
+        #     for key, value in comm.values.items():
+        #         # print("Comment num: {}".format(comm_ind))
+        #         # print("Key: {}\tValue: {}".format(key, value))
+        #         # print("Index in list(self.taget_names): {}".format(list(self.target_names).index(key)))
+        #         # Каждая строчка - комментарий, столбец - ищем индекс в множестве всех фич
+        #         self.data[comm_ind, (list(self.target_names).index(key))] = value
+        #     # # Заполняем по строчке ndarray
+
+        # Comments.s_data = sparse.csr_matrix(self.data)
+        # print(Comments.s_data)
+
+        # data_dest = "data/features.npy"
+        # print("Saving data to file {}".format(data_dest))
+        # np.save(data_dest, self.data)
+        
+        # sparce_data_dest = "data/s_features.npy"
+        # np.save(sparce_data_dest, Comments.s_data)
+
+        # print("Ended saving features in files:\n{}\n{}".format(data_dest, sparce_data_dest))
         
     def load_data_from_file(self):
         Comments.data = np.load('data/features.npy')
@@ -297,6 +409,24 @@ class Comment:
         self.tf_idf = {}
         self.values = {}
 
+    def count(self):
+        # Побавляем фичи из этой фигни в общую стопку
+        for feature in self.features:
+            # Если этой фичи ещё нет в общем списке, добавляем с нулевыми показателями
+            if feature not in Comments.features_count:
+                Comments.features_count[feature] = {
+                    'all': 0, 'pos': 0, 'neg': 0, 'num_all': 0, 'num_pos': 0, 'num_neg': 0
+                }
+            # Затем добавляем значения
+            Comments.features_count[feature]['all'] += self.cnt[feature]
+            Comments.features_count[feature]['num_all'] += 1
+            if self.grade == 1:
+                Comments.features_count[feature]['pos'] += self.cnt[feature]
+                Comments.features_count[feature]['num_pos'] += 1
+            else:
+                Comments.features_count[feature]['neg'] += self.cnt[feature]
+                Comments.features_count[feature]['num_neg'] += 1
+
     def make_vector(self):
         # Создание вектора признаков
         self.features = self.text.split(' ')
@@ -322,23 +452,36 @@ class Comment:
             count_in_text = self.cnt[feature]
             tf = count_in_text / len(self.text)
 
-            idf = log10(len(Comments.comments) / Comments.count_word_in_comments(Comments, feature))
+            # idf = log10(len(Comments.comments) / Comments.count_word_in_comments(Comments, feature))
+            idf = log10(len(Comments.comments) / Comments.features_count[feature]['num_all'])
             self.tf_idf[feature] = tf * idf
 
-            # if tf * idf < 0.00025: print("Feature:\t{}\ttf-idf:\t{}".format(feature, tf * idf))
-            if tf * idf < 0.00025: Comment.tf_idf_words += str(feature) + "\n"
+            if tf * idf < settings.TF_IDF_EDGE:
+                self.features.remove(feature)
+
+            # Если тф-идф ниже границы, убираем ( а так записываем в файл для подсчёта )
+            if tf * idf < settings.TF_IDF_EDGE: Comment.tf_idf_words += str(feature) + "\n"
 
 
     def count_values(self):    
         for feature in self.features:
-            self.values[feature] = self.cnt[feature] * log10((len(Comments.negative_comments) * Comments.count_word_in_positive(Comments, feature)) / (len(Comments.positive_comments) * Comments.count_word_in_negative(Comments, feature)))
+            if Comments.features_count[feature]['pos'] == 0: Comments.features_count[feature]['pos'] = 0.1
+            if Comments.features_count[feature]['neg'] == 0: Comments.features_count[feature]['neg'] = 0.1
+            self.values[feature] = self.cnt[feature] * log10((len(Comments.negative_comments) * Comments.features_count[feature]['pos']) / (len(Comments.positive_comments) * Comments.features_count[feature]['neg']))
+            if feature not in Comments.delta_tf_idf_values:
+                Comments.delta_tf_idf_values[feature] = log10((len(Comments.negative_comments) * Comments.features_count[feature]['pos']) / (len(Comments.positive_comments) * Comments.features_count[feature]['neg']));
 
     # TODO: Создать возможность удаления ненужных N-грамм
     def delete_useless(self):
         for key, value in self.tf_idf.items():
-            if value < 0.00025:
+            if value < settings.TF_IDF_EDGE:
                 print("Deleting feature: '{}' with value {}".format(key, value))
                 self.features.remove(key)
-
+    
+    def load_delta_tf_idf(self):
+        print("loading delta tf idf from file")
+        for feature in self.features:
+            if feature in Comments.delta_tf_idf_values:
+                self.values[feature] = self.cnt[feature] * Comments.delta_tf_idf_values[feature]
 
 # TODO: Посмотреть можно ли убрать предлоги используя tf-idf
