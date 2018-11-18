@@ -17,7 +17,7 @@ from utils import Watcher
 length = 10000
 disp = Watcher(length)
 for index in range(0, length):
-    disp.display_load(index, length, "counting target_names indexes")
+    disp.display_load(index, "counting target_names indexes")
 
 
 # print('tf-idf edge: {}'.format(settings.TF_IDF_EDGE))

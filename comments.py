@@ -22,6 +22,7 @@ from math import log10
 
 from pprint import pprint
 
+from utils import Watcher
 
 # TODO: Как нибудь с помощью видеокарты ускорить подсчёт этих значений
 
@@ -201,8 +202,10 @@ class Comments:
 
         # Подсчитываем для каждого коммента вектор признаков
         # from utils import Watcher следить за прогрессом
+        wt = Watcher(len(self.comments))
         for comm in self.comments:
-            print("Comm {} from {}\tMaking vector".format(self.comments.index(comm), len(self.comments)))
+            wt.display_load(self.comments.index(comm), "making vector")
+            # print("Comm {} from {}\tMaking vector".format(self.comments.index(comm), len(self.comments)))
             comm.make_vector()
             # Подсчитываем кол-во фичей в этом комменте и добавляем в общую кучу
             if count: comm.count()
@@ -217,7 +220,8 @@ class Comments:
         # tf-idf для всех комментариев
         #####################
         for comm in self.comments:
-            print("Comm {} from {}\tCounting tf-idf".format(self.comments.index(comm), len(self.comments)))
+            wt.display_load(self.comments.index(comm), "counting tf-idf")
+            # print("Comm {} from {}\tCounting tf-idf".format(self.comments.index(comm), len(self.comments)))
             # Считаем и сразу удаляем ненужные слова
             comm.count_tf_idf()
             # pprint(comm.tf_idf)
@@ -236,14 +240,21 @@ class Comments:
         # Подсчитываем кол-во разных слов
         target_names = set()
         for comm in self.comments:
-            print("Comm {} from {}\tCreating target names".format(self.comments.index(comm), len(self.comments)))
+            wt.display_load(self.comments.index(comm), "creating target names")
+            # print("Comm {} from {}\tCreating target names".format(self.comments.index(comm), len(self.comments)))
             for feature in comm.features:
                 target_names.add(feature)
 
         Comments.target_names = sorted(list(target_names))
 
+        target_names_text = ""
+        for name in Comments.target_names:
+            target_names_text += name + "\n" 
+
+        ut.write_html("data/target_names.txt", target_names_text)
 
         target_names_len = len(Comments.target_names)
+        wt = Watcher(target_names_len)
         # Загружаем чтобы не считать всё заново
         count = 1
         if ut.path_exists('data/target_names_indexes.json'):
@@ -252,28 +263,30 @@ class Comments:
                 Comments.target_names_dict = json.load(file)
                 count = 0
 
+        
+        oldLetter = ''
+        endIndex = 0
+        startIndex = 0
         if count:
-            j = 0
             # Сделать по индексам, и когда нашли конечный индекс сразу смещаться на него -1
             # Делать без внутреннего цикла, а просто заводить переменную *текущая буква* и когда другая буква не равна ей просто ставить конечный индекс - новое слово
             for j in range(0, len(Comments.target_names)):
                 name = Comments.target_names[j]
                 if name == '':
                     continue
-                print("{} from {}\tCounting target_names indexes".format(Comments.target_names.index(name), target_names_len))
+                wt.display_load(j, "making vector")
+                # print("{} from {}\tCounting target_names indexes".format(Comments.target_names.index(name), target_names_len))
                 letter = name[0]
-                if letter not in Comments.target_names_dict:
-                    # Находим индекс последней вхождения фичи на эту букву.
-                    for i in range(Comments.target_names.index(name), len(Comments.target_names)):
-                        print("\n {}'s word in target_names\nSearching for letter: {}\nCurrent feature: {}".format(i, letter, Comments.target_names[i]))
-                        
-                        if Comments.target_names[i][0] != letter:
-                            endEnd = i
-                            print("Start for {} = {}\tend = {}".format(letter, Comments.target_names.index(name),i))
-                            j = i - 1
-                            break
-                    # К словарю добавляем индекс в котором мы встретили это слово (т.к. списочек отсортированный) и индекс конечного вхождения который мы нашли ранее
-                    Comments.target_names_dict[letter] = str(Comments.target_names.index(name)) + ":" + str(endEnd)
+
+                if letter != oldLetter:
+                    endIndex = j
+                    if j != 0:
+                        Comments.target_names_dict[oldLetter] = str(startIndex) + ":" + str(endIndex)
+                        print("Letter {} has range {} - {}".format(oldLetter, startIndex, endIndex))
+                    startIndex = j
+                    oldLetter = letter
+
+                
 
         # Сохраняем то что сейчас написали, т.к. процесс мега трудоёмкий
         if not ut.path_exists('data/target_names_indexes.json'):
@@ -446,7 +459,7 @@ class Comment:
         # Вес - среднее между TF-IDF и значением в словаре
 
     def count_tf_idf(self):
-        print("Counting tf-idf")
+        # print("Counting tf-idf")
         for feature in self.features:
             # Для каждой фичи подсчитываем tf-idf
             count_in_text = self.cnt[feature]

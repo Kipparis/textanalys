@@ -38,17 +38,20 @@ class Watcher:
         # Считаем отступ значений для того, чтобы потребовалось вывести новый блок
         # В дальнейшем выводи если отступ преодолён и задаём новый
         self.delta = int(length / 10)
-        self.edge = 0
+        self.length = length + 1
+        self.h_edge = 0
+        self.l_edge = 0
     
 
-    def display_load(self, ind, length, message):
-        if ind > self.edge:
+    def display_load(self, ind, message):
+        if ind > self.h_edge or ind < self.l_edge:
             ind += 1
-            length += 1
+
 
             numBoxes = 10
             # ind / length = count / 10
-            count = int(ind * numBoxes / length)
+            count = int(ind * numBoxes / self.length)
 
             print(u'\u23f9' * count + ' ' * (numBoxes - count) + '|\t' + message)
-            self.edge += self.delta
+            self.h_edge = ind + self.delta
+            self.l_edge = ind - self.delta
