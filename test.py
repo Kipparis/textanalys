@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import json
+
 import utils as ut
 import re
 
@@ -14,17 +16,9 @@ import settings
 
 from utils import Watcher
 
-arr = np.array([
-    [1,2,3],
-    [4,5,6],
-    [6,7,8]
-])
+with open('data/target_names.txt', 'r') as file:
+    target_names = file.read().split('\n')
 
-row = np.array([[1,2,3]])
-
-new_arr = np.r_[arr, row]
-
-print(new_arr)
-# print('tf-idf edge: {}'.format(settings.TF_IDF_EDGE))
+print(target_names)
 
 print("ended")

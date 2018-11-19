@@ -1,13 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import time
 start_time = time.time()
 
 import os, sys
 
 from comments import Comments
+from text_pipe import PipeLine
 
-# print("This is the name of the script: ", sys.argv[0])
-# print("Number of arguments: ", len(sys.argv))
-# print("The arguments are: ", str(sys.argv))
 
 crawl = 0
 process = 0
@@ -46,24 +46,30 @@ if process == 1:
 else:
     Comments.load_data_from_file(Comments)
 
-print("\n===============\nvvvvvvvvvvvvvvvv\n")
-print("Shape of data is:\n{}".format(Comments.data.shape))
-print("Startring parsing")
 
-# if bm == 1:
-#     Comments.parse_data(Comments)
-# else:
-#     Comments.load_model(Comments)
+if bm == 1:
+    Comments.parse_data(Comments)
+else:
+    Comments.load_model(Comments)
 
-# input_string = ''
-# input(input_string)
+if process == 1 or bm == 1:
+    print("\n===============\nvvvvvvvvvvvvvvvv\n")
+    print("Shape of data is:\n{}".format(Comments.data.shape))
+    print("Startring parsing")
 
-# X = Comments.data
-# y = Comments.grades
-# print("X shape: {}\ty shape: {}\n".format(Comments.data.shape, Comments.grades.shape))
+pl = PipeLine()
 
+while True:
+    try:
+        text = input("\n==============\nВведите текст: ")
+        if text == "exit":
+            break
+        pl.process(text)
+    except EOFError:
+        print("exit")
+        break
 
-
+print("bye :]")
 # Представляем текст в виде вектора признаков
 # для каждого текста указываем тональность (уже есть)
 # Выбрать алгоритм классификации текста
