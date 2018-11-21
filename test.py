@@ -16,9 +16,16 @@ import settings
 
 from utils import Watcher
 
-with open('data/target_names.txt', 'r') as file:
-    target_names = file.read().split('\n')
 
-print(target_names)
+reg = r'\S+{n}\S*'
+
+reg = re.compile(reg)
+
+inp_str = "asdf {n} asdf {n}asdf adadsf{n}asdf brake{n}"
+inp_str2 = "asd asdf asd asd asdf"
+
+print(reg.findall(inp_str2))
+
+print(len(reg.findall(inp_str)) == 0)
 
 print("ended")

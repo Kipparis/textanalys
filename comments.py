@@ -26,6 +26,8 @@ from pprint import pprint
 
 from utils import Watcher
 
+import re
+
 # TODO: Как нибудь с помощью видеокарты ускорить подсчёт этих значений
 
 class Comments:
@@ -152,7 +154,7 @@ class Comments:
         clf = svm.SVC(kernel=settings.KERNEL, C=reg, random_state=2)
         # clf = MultinomialNB() # наивный байесовский классификатор
 
-        scores = cross_val_score(clf, X, y, cv=5, n_jobs=-1)
+        scores = cross_val_score(clf, X, y, cv=3, n_jobs=-1)
         print(scores)
         print("Score.mean:\t{}".format(scores.mean()))
         print("Scores.std:\t{}".format(scores.std() * 2))
@@ -467,6 +469,13 @@ class Comment:
                 lastWord = word
 
         # if self.log: print(self.features)
+        # убираем и сокращаем всякий шлак
+        # Убираем {n}
+        reg = r'\S+{n}\S*'
+        useless_ns = re.compile(reg)
+        for feature in self.features:
+            if len(useless_ns.findall(feature)) != 0:
+                self.features.remove(feature)
 
         self.cnt = Counter(self.features)
         # Присваивание признаку его веса

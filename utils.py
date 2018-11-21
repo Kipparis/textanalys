@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+
 import os, sys
     
 def write_html(path, html):
