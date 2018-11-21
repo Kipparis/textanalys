@@ -297,18 +297,16 @@ class Comments:
         wt = Watcher(len(Comments.comments))
 
         # TODO: Сделать подгрузку логарифмического выражения
-        count = 1
 
         # Подсчитываем delta tf - idf
         for comm in self.comments:
             wt.display_load(self.comments.index(comm), "counting delta tf-idf")
-            comm.count_values
+            comm.count_values()
 
         ut.write_html('data/delta_tf_idf_log.txt', Comments.output)
 
         # Сохраняем логарифмическое выражение
         with open('data/delta_tf_idf_frac.json', 'w') as file:
-            print(Comments.delta_tf_idf_frac)
             json.dump(Comments.delta_tf_idf_frac, file, ensure_ascii=False)
             print("Ended saving file")
 
@@ -319,10 +317,6 @@ class Comments:
             counter += 1
         ut.write_html("data/target_names.txt", target_names_text)
 
-        print("First element: {}\tLast element: {}".format(Comments.target_names[0], Comments.target_names[-1]))
-
-        print("target name len: {}".format(len(Comments.target_names)))
-        print("counter: {}".format(counter))
 
         data = sparse.lil_matrix((len(Comments.comments), len(Comments.target_names)))
         comments_len = len(Comments.comments)
@@ -354,7 +348,6 @@ class Comments:
         Comments.data = data
 
         print("Data shape:\t{}".format(Comments.data.shape))
-        print("Data is:\n{}".format(Comments.data))
         print("Grade shape:\t{}".format(Comments.grades.shape))
         print("Target_name len:\t{}".format(len(Comments.target_names)))
 
@@ -461,6 +454,7 @@ class Comment:
                 Comments.features_count[feature]['num_neg'] += 1
 
     def make_vector(self):
+        # TODO: убирать все {n} и запятые + повысить порог tf-idf
         # Создание вектора признаков
         self.features = self.text.split(' ')
 
@@ -508,16 +502,21 @@ class Comment:
                 self.features.remove(feature)
                 Comment.tf_idf_words += str(feature) + "\n"
             
-    def count_values(self):    
+    def count_values(self):
+        # print("Counting values")
         for feature in self.features:
-            if Comments.features_count[feature]['pos'] == 0: Comments.features_count[feature]['pos'] = 0.1
-            if Comments.features_count[feature]['neg'] == 0: Comments.features_count[feature]['neg'] = 0.1
-            self.values[feature] = self.cnt[feature] * log10((len(Comments.negative_comments) * Comments.features_count[feature]['pos']) / (len(Comments.positive_comments) * Comments.features_count[feature]['neg']))
-            Comments.output += "Feature: {}\nself.cnt: {}\tlog10: {}".format(feature, self.cnt[feature], log10((len(Comments.negative_comments) * Comments.features_count[feature]['pos']) / (len(Comments.positive_comments) * Comments.features_count[feature]['neg'])))
+            if feature in Comments.delta_tf_idf_frac:
+                self.values[feature] = self.cnt[feature] * Comments.delta_tf_idf_frac[feature]
+            else:
+                if Comments.features_count[feature]['pos'] == 0: Comments.features_count[feature]['pos'] = 0.1
+                if Comments.features_count[feature]['neg'] == 0: Comments.features_count[feature]['neg'] = 0.1
+                frac = log10((len(Comments.negative_comments) * Comments.features_count[feature]['pos']) / (len(Comments.positive_comments) * Comments.features_count[feature]['neg']))
             
-            frac = (len(Comments.negative_comments) * Comments.features_count[feature]['pos']) / (len(Comments.positive_comments) * Comments.features_count[feature]['neg'])
-            print("Frac is\t{}".format(frac))
-            Comments.delta_tf_idf_frac[feature] = frac
+                Comments.delta_tf_idf_frac[feature] = frac
+                self.values[feature] = self.cnt[feature] * frac
+                
+            # Comments.output += "Feature: {}\nself.cnt: {}\tlog10: {}".format(feature, self.cnt[feature], frac)
+            
 
     # TODO: Создать возможность удаления ненужных N-грамм
     def delete_useless(self):

@@ -55,3 +55,7 @@ class Watcher:
             print(u'\u23f9' * count + ' ' * (numBoxes - count) + '|\t' + message)
             self.h_edge = ind + self.delta
             self.l_edge = ind - self.delta
+
+class Log:
+    def __init__(self, header):
+        self.header = header
