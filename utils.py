@@ -38,9 +38,10 @@ def path_exists(path):
 
 class Watcher:
     def __init__(self, length):
+        self.numBoxes = 20
         # Считаем отступ значений для того, чтобы потребовалось вывести новый блок
         # В дальнейшем выводи если отступ преодолён и задаём новый
-        self.delta = int(length / 10)
+        self.delta = int(length / self.numBoxes)
         self.length = length + 1
         self.h_edge = 0
         self.l_edge = 0
@@ -50,12 +51,10 @@ class Watcher:
         if ind > self.h_edge or ind < self.l_edge:
             ind += 1
 
-
-            numBoxes = 10
             # ind / length = count / 10
-            count = int(ind * numBoxes / self.length)
+            count = int(ind * self.numBoxes / self.length)
 
-            print(u'\u23f9' * count + ' ' * (numBoxes - count) + '|\t' + message)
+            print(u'\u23f9' * count + ' ' * (self.numBoxes - count) + '|\t' + message)
             self.h_edge = ind + self.delta
             self.l_edge = ind - self.delta
 

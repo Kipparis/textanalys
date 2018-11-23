@@ -1,6 +1,8 @@
 {
     "python.pythonPath": "${workspaceFolder}/venv/bin/python",
 
+    "workbench.panel.defaultLocation": "right",
+
     "files.watcherExclude": {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true,

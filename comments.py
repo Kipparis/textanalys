@@ -50,6 +50,7 @@ class Comments:
     # 'имя фичи' : {'all': $всего, 'pos': $в_позитивных, 'neg': $в_негативных}
     features_count = {}
 
+    stupid_comments = ''
 
     owned = []
     reviews = []
@@ -209,12 +210,23 @@ class Comments:
 
         # Подсчитываем для каждого коммента вектор признаков
         # from utils import Watcher следить за прогрессом
+        Comments.stupid_comments = ''
+
+        reg = r'\S+{n}\S+'
+        # Перенести этот компайл над всеми комментами, а внутри использовать готовый
+        Comment.useless_ns = re.compile(reg)
+        reg = r'\S+,\S+'
+        Comment.split_comma = re.compile(reg)
+
+        reg = r'.+\..+'
+        Comment.dot_in_center = re.compile(reg) # Точка посередине фичи
+
         wt = Watcher(len(self.comments))
         for comm in self.comments:
             wt.display_load(self.comments.index(comm), "making vector")
             comm.make_vector()
             # Подсчитываем кол-во фичей в этом комменте и добавляем в общую кучу
-            if count: comm.count()
+            if count: comm.count() # Подсчитываем кол-во фичей во всех комментах
 
 
         if not ut.path_exists('data/words_count.json'):
@@ -255,6 +267,7 @@ class Comments:
                 target_names.add(feature)
 
         Comments.target_names = sorted(list(target_names))
+        print("Comments.target_names len is:\t{}".format(len(Comments.target_names)))
 
         
         wt = Watcher(len(Comments.target_names))
@@ -313,10 +326,8 @@ class Comments:
             print("Ended saving file")
 
         target_names_text = ""
-        counter = 0
         for name in Comments.target_names:
-            target_names_text += name + "::|::" 
-            counter += 1
+            target_names_text += name + "\n::|::\n" 
         ut.write_html("data/target_names.txt", target_names_text)
 
 
@@ -468,16 +479,76 @@ class Comment:
                 self.features.append(lastWord + " " + word)
                 lastWord = word
 
-        # if self.log: print(self.features)
-        # убираем и сокращаем всякий шлак
-        # Убираем {n}
-        reg = r'\S+{n}\S*'
-        useless_ns = re.compile(reg)
-        for feature in self.features:
-            if len(useless_ns.findall(feature)) != 0:
-                self.features.remove(feature)
+        # Обособлять сердечки и улыбочки всякие
+        features_len = len(self.features)
+        for _ in range(0, features_len):
+            # print("_ is: {}\tarr len: {}".format(_, features_len))
+            if _ >= len(self.features):
+                break
+            feature = self.features[_]
 
-        self.cnt = Counter(self.features)
+            # Приводим к нижнему регистру, чтобы при создании таргет неймс было меньше уникалок
+            self.features[_] = feature.lower()
+            feature = feature.lower()
+            # print(feature)
+
+            # Находим первую букву для дальнейших вычисления
+            if feature == '':
+                self.features.remove(feature)
+                # print('removed cos empty')
+                continue
+            first_letter = feature[0]
+            code = ord(first_letter)
+
+            # Если это запятая которая отделяет два слитных слова, можем просто убрать
+            if len(self.split_comma.findall(feature)) != 0:
+                self.features.remove(feature)
+                self.features.append(feature.split(',')[0])
+                self.features.append(feature.split(',')[-1])
+                # print('removed cos , in center')
+            elif feature == ',':
+                self.features.remove(feature)                
+                # print('removed cos , in center')
+            elif len(self.useless_ns.findall(feature)) != 0:
+                # Если у нас где то \n мы убираем столько раз сколько надо потом добавляем граничные
+                self.features.remove(feature)
+                while '{n}{n}' in feature:
+                    feature = feature.replace('{n}{n}', '{n}')
+                self.features.append(feature.split('{n}')[0])
+                self.features.append(feature.split('{n}')[-1])
+                # print('removed cos reg = r"\S+{n}\S+"')
+            elif (code in range(65, 91)) or (code in range(97, 123)) or (code in range(126, 967)) or (code in range(1108, 9617)) or (code in range(10244, 119859)):
+                self.features.remove(feature)
+                # print('removed cos code in range')
+            elif len(self.dot_in_center.findall(feature)) != 0:
+                self.features.remove(feature)
+                # print('removed cos dot in center')
+            else:
+                # print('Nothing deleted')
+                # print('features are:\n{}'.format(self.features))
+                # print('First element of array: {}'.format(self.features[0]))
+                # print('Feature: {}'.format(feature))
+                # print('They equals? {}'.format(self.features[0] == feature))
+                # Ни один из итемов не удалился, обрабатываем текст
+                if '{n}' in feature:
+                    self.features[_] = feature.replace('{n}', '').strip()
+                if '.' in feature:
+                    self.features[_] = feature.replace('.', '').strip()
+                if ',' in feature:
+                    self.features[_] = feature.replace(',','').strip()
+                if '{n}' in feature:
+                    self.features[_] = feature.replace('{n}','').strip()
+            features_len = len(self.features)
+                      
+                
+
+        # Если список фичей пуст, удаляем этот коммент из общего списка
+        if len(self.features) == 0:
+            Comments.comments.remove(self)
+        else:
+            self.cnt = Counter(self.features)
+
+
         # Присваивание признаку его веса
         # Вес - среднее между TF-IDF и значением в словаре
 
