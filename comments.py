@@ -267,6 +267,12 @@ class Comments:
                 target_names.add(feature)
 
         Comments.target_names = sorted(list(target_names))
+
+        target_names_text = ""
+        for name in Comments.target_names:
+            target_names_text += name + "\n::|::\n" 
+        ut.write_html("data/target_names.txt", target_names_text)
+
         print("Comments.target_names len is:\t{}".format(len(Comments.target_names)))
 
         
@@ -324,11 +330,6 @@ class Comments:
         with open('data/delta_tf_idf_frac.json', 'w') as file:
             json.dump(Comments.delta_tf_idf_frac, file, ensure_ascii=False)
             print("Ended saving file")
-
-        target_names_text = ""
-        for name in Comments.target_names:
-            target_names_text += name + "\n::|::\n" 
-        ut.write_html("data/target_names.txt", target_names_text)
 
 
         data = sparse.lil_matrix((len(Comments.comments), len(Comments.target_names)))
@@ -488,8 +489,8 @@ class Comment:
             feature = self.features[_]
 
             # Приводим к нижнему регистру, чтобы при создании таргет неймс было меньше уникалок
-            self.features[_] = feature.lower()
-            feature = feature.lower()
+            self.features[_] = feature.lower().strip()
+            feature = feature.lower().strip()
             # print(feature)
 
             # Находим первую букву для дальнейших вычисления
@@ -517,27 +518,52 @@ class Comment:
                 self.features.append(feature.split('{n}')[0])
                 self.features.append(feature.split('{n}')[-1])
                 # print('removed cos reg = r"\S+{n}\S+"')
-            elif (code in range(65, 91)) or (code in range(97, 123)) or (code in range(126, 967)) or (code in range(1108, 9617)) or (code in range(10244, 119859)):
+            elif (code in range(32, 1031)) or (code in range(1108, 9617)) or (code in range(10244, 119859)):
                 self.features.remove(feature)
+                # print(feature, "not in range")
+            elif '"' in feature: # обычно если присутствует ковычка -> это название игры, которая индивидуально везде
+                self.features.remove(feature)
+            # (code in range(33, 48)) or
+            # or (code in range(48, 58)) or
+            # or (code in range(65, 91)) or
+            # or (code in range(97, 123)) or
+            # or (code in range(126, 967)) or
+                
                 # print('removed cos code in range')
             elif len(self.dot_in_center.findall(feature)) != 0:
                 self.features.remove(feature)
                 # print('removed cos dot in center')
             else:
+                # TODO: Сначала работаю со строками, потом проверяю на удаление и так пока ничего уже нельзя будет сделать
+                # TODO: Записывать старую и новую фичу
+
                 # print('Nothing deleted')
                 # print('features are:\n{}'.format(self.features))
                 # print('First element of array: {}'.format(self.features[0]))
                 # print('Feature: {}'.format(feature))
                 # print('They equals? {}'.format(self.features[0] == feature))
                 # Ни один из итемов не удалился, обрабатываем текст
-                if '{n}' in feature:
-                    self.features[_] = feature.replace('{n}', '').strip()
-                if '.' in feature:
-                    self.features[_] = feature.replace('.', '').strip()
-                if ',' in feature:
-                    self.features[_] = feature.replace(',','').strip()
-                if '{n}' in feature:
-                    self.features[_] = feature.replace('{n}','').strip()
+                somethingChanged = True
+                while somethingChanged:
+                    if feature == '':
+                        break
+                    first_letter = feature[0]
+                    code = ord(first_letter)
+                    if (32 <= code < 1031) or (1108 <= code < 9617) or (10244 <= code < 119859):
+                        # print(feature, "not in range")
+                        self.features.remove(feature)
+                        break
+                    elif '{n}' in feature:
+                        feature = feature.replace('{n}', '').strip()
+                        self.features[_] = feature
+                    elif '.' in feature:
+                        feature = feature.replace('.', '').strip()
+                        self.features[_] = feature
+                    elif ',' in feature:
+                        feature = feature.replace(',','').strip()
+                        self.features[_] = feature
+                    else:
+                        somethingChanged = False
             features_len = len(self.features)
                       
                 
@@ -610,4 +636,29 @@ class Comment:
             if feature in Comments.delta_tf_idf_frac:
                 self.values[feature] = self.cnt[feature] * Comments.delta_tf_idf_frac[feature]
 
-# TODO: Посмотреть можно ли убрать предлоги используя tf-idf
+    def parse_feature(self, feature):
+        # Если послали полную хуйню, возвращаем пустоту => там понимаем что убираем всё
+        output = feature
+
+        # Первая буква должна быть обязательно либо русская, либо смайлик, остальное не ебёт ( удаляем самму букву (при таргет неймс всё равно повторки уберуться ))
+        isChanged = True
+        while isChanged:
+            if feature == '':
+                break
+            first_letter = feature[0]
+            code = ord(first_letter)
+            if (32 <= code < 1031) or (1108 <= code < 9617) or (10244 <= code < 119859):
+                # print(feature, "not in range")
+                self.features.remove(feature)
+                break
+            elif '{n}' in feature:
+                feature = feature.replace('{n}', '').strip()
+                self.features[_] = feature
+            elif '.' in feature:
+                feature = feature.replace('.', '').strip()
+                self.features[_] = feature
+            elif ',' in feature:
+                feature = feature.replace(',','').strip()
+                self.features[_] = feature
+            else:
+                somethingChanged = False
