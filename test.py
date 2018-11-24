@@ -20,70 +20,83 @@ from utils import Watcher
 # for i in range(1072, 1104):
 #     print(chr(i))
 
-def parse_feature(feature):
-        # Если послали полную хуйню, возвращаем пустоту => там понимаем что убираем всё
-        output = feature.strip()
-
-        if output == '':
-            return None
-
-        # циклим убираем все запятые, сокращаем восклицательные знаки, вопросительные знаки, если точка тогда возвращаем первый элемент либо просто убираем точку
-        # если встречается {n} сокращаем как точку.
-        isChanged = True
-        while isChanged:
-            first_letter = output[0]
-            code = ord(first_letter)
-            if '{n}{n}' in output:
-                output = output.replace('{n}{n}', '{n}')
-            elif '!!' in output:
-                output = output.replace('!!', '!')
-            elif '??' in output:
-                output = output.replace('??', '?')
-            elif ',,' in output:
-                output = output.replace(',,', ',')
-            elif '..' in output:
-                output = output.replace('..', '.')
-            elif '\"\"' in output:
-                output = output.replace('\"\"', '\"')
-            elif '\'\'' in output:
-                output = output.replace('\'\'', '\'')
-            else:
-                isChanged = False
-
-        # проверяем такие случаи как text.text    text{n}text    text,text    text?!"'tetxt ( вроде можно создать регурярку используя [] для задания множествас) 
-        stupid_symbol = re.compile(r'\S+([.,\-()!?"\']|\{n\})+\S+')
-
-        string_symb = ".,-()!\"?\'"
-        symbols = list(string_symb)
-        symbols.append('{n}')
-
-        if len(stupid_symbol.findall(output)) != 0:
-            for symb in symbols:
-                if symb in output:
-                    output = output.split(symb)[0] + '||||' + output.split(symb)[-1].strip()
-                    print("Split by {} and return {}".format(symb, output))
-        else:
-            for symb in symbols:
-                if symb in output:
-                    # Знак вопроса убираем только если он не в конце
-                    output = output.replace(symb, '').strip()
-                    print("Remove and return {}".format(symb))
-
+def clear_some_sht(feature):
+    # Если послали полную хуйню, возвращаем пустоту => там понимаем что убираем всё
+    output = feature.strip().lower()
+    if output == '':
+        return None
+    # циклим убираем все запятые, сокращаем восклицательные знаки, вопросительные знаки, если точка тогда возвращаем первый элемент либо просто убираем точку
+    # если встречается {n} сокращаем как точку.
+    isChanged = True
+    while isChanged:
         first_letter = output[0]
         code = ord(first_letter)
+        if '{n}{n}' in output:
+            output = output.replace('{n}{n}', '{n}')
+        elif '!!' in output:
+            output = output.replace('!!', '!')
+        elif '??' in output:
+            output = output.replace('??', '?')
+        elif ',,' in output:
+            output = output.replace(',,', ',')
+        elif '..' in output:
+            output = output.replace('..', '.')
+        elif '\"\"' in output:
+            output = output.replace('\"\"', '\"')
+        elif '\'\'' in output:
+            output = output.replace('\'\'', '\'')
+        else:
+            isChanged = False
+    # проверяем такие случаи как text.text    text{n}text    text,text    text?!"'tetxt ( вроде можно создать регурярку используя [] для задания множествас) 
+    stupid_symbol = re.compile(r'\S+([.,\-()!?"\']|\{n\})+\S+')
+    string_symb = ".,-()!\"?\'"
+    symbols = list(string_symb)
+    symbols.append('{n}')
+    if len(stupid_symbol.findall(output)) != 0:
+        for symb in symbols:
+            if symb in output:
+                output = output.split(symb)[0] + '||||' + output.split(symb)[-1].strip()
+                print("Split by {} and return {}".format(symb, output))
+    else:
+        for symb in symbols:
+            if symb in output:
+                output = output.replace(symb, '').strip()
+                print("Remove and return {}".format(symb))
+    # Если там присутствуют английские или какие то ебучие буквы, ремуваем
+    for letter in output:
+        code = ord(letter)
+        # print("Outputting: {}\tCode: {}".format(letter, code))
+        if letter == "|":
+            continue
+        elif not (((code >= 1040) and (code <= 1104)) or ((code >= 48) and (code <= 58))):
+            print(code)
+            print("{} not in given range".format(chr(code)))
+            return None
+    return output
 
-        # Если там присутствуют английские или какие то ебучие буквы, ремуваем
-
-        return output
-
-
-# spacees = '  blbabalb   blalbalb    '
 spacees = input("type your feature: ")
-output = parse_feature(spacees)
+output = clear_some_sht(spacees)
+if output != None:
+    print("output contains something")
+    if "||||" in output:
+        output = output.split("||||")
+        print("output is: {}".format(output))
+        for out in output:
+            if out == "": output.remove(out)
+
+
 if output is None:
     print("useless string")
 else:
-    print("parsing string: '{}'\toutput is: '{}'".format(spacees, parse_feature(spacees)))
+    print("parsing string: {}\toutput is: {}".format(spacees, output))
+
+
+
+# print("А has code {}".format(ord('А')))
+# print("Я has code {}".format(ord('Я')))
+# print("а has code {}".format(ord('а')))
+# print("я has code {}".format(ord('я')))
+
 
 # print("A has code {}".format(ord('A')))
 # print("Z has code {}".format(ord('Z')))

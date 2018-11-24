@@ -470,109 +470,35 @@ class Comment:
     def make_vector(self):
         # TODO: убирать все {n} и запятые + повысить порог tf-idf
         # Создание вектора признаков
-        self.features = self.text.split(' ')
+        self.features_l = self.text.split(' ')
+        features_set = set()
 
         lastWord = ''
         for word in self.text.split(' '):
             if lastWord == '':
                 lastWord = word
             else:
-                self.features.append(lastWord + " " + word)
+                self.features_l.append(lastWord + " " + word)
                 lastWord = word
 
-        # Обособлять сердечки и улыбочки всякие
-        features_len = len(self.features)
-        for _ in range(0, features_len):
-            # print("_ is: {}\tarr len: {}".format(_, features_len))
-            if _ >= len(self.features):
-                break
-            feature = self.features[_]
+        for feature in self.features_l:
+            output = ut.clear_some_sht(feature)
+            if output != None:
+                if "||||" in output:
+                    output_list = output.split("||||")
+                    for out in output_list:
+                        if out == "": output_list.remove(out)
+                    if len(output_list) != 0:
+                        for out in output_list:
+                            features_set.add(out)
+                features_set.add(output)
+        # Вообще все фичи == features_l
+        # Потом парсим каждую фичу и добавляем её в сет
+        # После этого переводим сет в нормальный список своих фичей
+        self.features = list(features_set)
 
-            # Приводим к нижнему регистру, чтобы при создании таргет неймс было меньше уникалок
-            self.features[_] = feature.lower().strip()
-            feature = feature.lower().strip()
-            # print(feature)
 
-            # Находим первую букву для дальнейших вычисления
-            if feature == '':
-                self.features.remove(feature)
-                # print('removed cos empty')
-                continue
-            first_letter = feature[0]
-            code = ord(first_letter)
-
-            # Если это запятая которая отделяет два слитных слова, можем просто убрать
-            if len(self.split_comma.findall(feature)) != 0:
-                self.features.remove(feature)
-                self.features.append(feature.split(',')[0])
-                self.features.append(feature.split(',')[-1])
-                # print('removed cos , in center')
-            elif feature == ',':
-                self.features.remove(feature)                
-                # print('removed cos , in center')
-            elif len(self.useless_ns.findall(feature)) != 0:
-                # Если у нас где то \n мы убираем столько раз сколько надо потом добавляем граничные
-                self.features.remove(feature)
-                while '{n}{n}' in feature:
-                    feature = feature.replace('{n}{n}', '{n}')
-                self.features.append(feature.split('{n}')[0])
-                self.features.append(feature.split('{n}')[-1])
-                # print('removed cos reg = r"\S+{n}\S+"')
-            elif (code in range(32, 1031)) or (code in range(1108, 9617)) or (code in range(10244, 119859)):
-                self.features.remove(feature)
-                # print(feature, "not in range")
-            elif '"' in feature: # обычно если присутствует ковычка -> это название игры, которая индивидуально везде
-                self.features.remove(feature)
-            # (code in range(33, 48)) or
-            # or (code in range(48, 58)) or
-            # or (code in range(65, 91)) or
-            # or (code in range(97, 123)) or
-            # or (code in range(126, 967)) or
-                
-                # print('removed cos code in range')
-            elif len(self.dot_in_center.findall(feature)) != 0:
-                self.features.remove(feature)
-                # print('removed cos dot in center')
-            else:
-                # TODO: Сначала работаю со строками, потом проверяю на удаление и так пока ничего уже нельзя будет сделать
-                # TODO: Записывать старую и новую фичу
-
-                # print('Nothing deleted')
-                # print('features are:\n{}'.format(self.features))
-                # print('First element of array: {}'.format(self.features[0]))
-                # print('Feature: {}'.format(feature))
-                # print('They equals? {}'.format(self.features[0] == feature))
-                # Ни один из итемов не удалился, обрабатываем текст
-                somethingChanged = True
-                while somethingChanged:
-                    if feature == '':
-                        break
-                    first_letter = feature[0]
-                    code = ord(first_letter)
-                    if (32 <= code < 1031) or (1108 <= code < 9617) or (10244 <= code < 119859):
-                        # print(feature, "not in range")
-                        self.features.remove(feature)
-                        break
-                    elif '{n}' in feature:
-                        feature = feature.replace('{n}', '').strip()
-                        self.features[_] = feature
-                    elif '.' in feature:
-                        feature = feature.replace('.', '').strip()
-                        self.features[_] = feature
-                    elif ',' in feature:
-                        feature = feature.replace(',','').strip()
-                        self.features[_] = feature
-                    else:
-                        somethingChanged = False
-            features_len = len(self.features)
-                      
-                
-
-        # Если список фичей пуст, удаляем этот коммент из общего списка
-        if len(self.features) == 0:
-            Comments.comments.remove(self)
-        else:
-            self.cnt = Counter(self.features)
+        self.cnt = Counter(self.features)
 
 
         # Присваивание признаку его веса
@@ -635,30 +561,3 @@ class Comment:
         for feature in self.features:
             if feature in Comments.delta_tf_idf_frac:
                 self.values[feature] = self.cnt[feature] * Comments.delta_tf_idf_frac[feature]
-
-    def parse_feature(self, feature):
-        # Если послали полную хуйню, возвращаем пустоту => там понимаем что убираем всё
-        output = feature
-
-        # Первая буква должна быть обязательно либо русская, либо смайлик, остальное не ебёт ( удаляем самму букву (при таргет неймс всё равно повторки уберуться ))
-        isChanged = True
-        while isChanged:
-            if feature == '':
-                break
-            first_letter = feature[0]
-            code = ord(first_letter)
-            if (32 <= code < 1031) or (1108 <= code < 9617) or (10244 <= code < 119859):
-                # print(feature, "not in range")
-                self.features.remove(feature)
-                break
-            elif '{n}' in feature:
-                feature = feature.replace('{n}', '').strip()
-                self.features[_] = feature
-            elif '.' in feature:
-                feature = feature.replace('.', '').strip()
-                self.features[_] = feature
-            elif ',' in feature:
-                feature = feature.replace(',','').strip()
-                self.features[_] = feature
-            else:
-                somethingChanged = False
