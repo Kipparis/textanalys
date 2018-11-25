@@ -79,22 +79,17 @@ def clear_some_sht(feature):
         for symb in symbols:
             if symb in output:
                 output = output.split(symb)[0] + '||||' + output.split(symb)[-1].strip()
-                # print("Split by {} and return {}".format(symb, output))
     else:
         for symb in symbols:
             if symb in output:
                 output = output.replace(symb, '').strip()
-                # print("Remove and return {}".format(symb))
 
     # Если там присутствуют английские или какие то ебучие буквы, ремуваем
     for letter in output:
         code = ord(letter)
-        # print("Outputting: {}\tCode: {}".format(letter, code))
         if letter == "|":
             continue
         elif not (((code >= 1040) and (code <= 1104)) or ((code >= 48) and (code <= 58))):
-            print(code)
-            # print("{} not in given range".format(chr(code)))
             return None
     return output
 
@@ -114,7 +109,6 @@ class Watcher:
         if ind > self.h_edge or ind < self.l_edge:
             ind += 1
 
-            # ind / length = count / 10
             count = int(ind * self.numBoxes / self.length)
 
             print(u'\u23f9' * count + ' ' * (self.numBoxes - count) + '|\t' + message)
