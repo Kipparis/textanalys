@@ -484,6 +484,7 @@ class Comment:
         for feature in self.features_l:
             output = ut.clear_some_sht(feature)
             if output != None:
+                # Если это скрытый массив, разделяем и добавляем каждую фичу
                 if "||||" in output:
                     output_list = output.split("||||")
                     for out in output_list:
@@ -491,12 +492,14 @@ class Comment:
                     if len(output_list) != 0:
                         for out in output_list:
                             features_set.add(out)
-                features_set.add(output)
+                # Если это обыная строчка, просто добавляем
+                else:
+                    features_set.add(output)
+
         # Вообще все фичи == features_l
         # Потом парсим каждую фичу и добавляем её в сет
         # После этого переводим сет в нормальный список своих фичей
         self.features = list(features_set)
-
 
         self.cnt = Counter(self.features)
 
