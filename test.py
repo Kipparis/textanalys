@@ -71,7 +71,7 @@ def clear_some_sht(feature):
         code = ord(letter)
         if letter == "|":
             continue
-        elif not (((code >= 1040) and (code <= 1104)) or ((code >= 48) and (code <= 58))):
+        elif not (((code >= 1040) and (code <= 1104)) or ((code >= 48) and (code <= 58)) or code == 32):
             return None
     return output
 
@@ -98,7 +98,7 @@ else:
 # print("а has code {}".format(ord('а')))
 # print("я has code {}".format(ord('я')))
 
-
+print(" has code {}".format(ord(" ")))
 # print("A has code {}".format(ord('A')))
 # print("Z has code {}".format(ord('Z')))
 # print("a has code {}".format(ord('a')))

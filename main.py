@@ -57,17 +57,17 @@ if process == 1 or bm == 1:
     print("Shape of data is:\n{}".format(Comments.data.shape))
     print("Startring parsing")
 
-# pl = PipeLine()
+pl = PipeLine()
 
-# while True:
-#     try:
-#         text = input("\n==============\nВведите текст: ")
-#         if text == "exit":
-#             break
-#         pl.process(text)
-#     except EOFError:
-#         print("exit")
-#         break
+while True:
+    try:
+        text = input("\n==============\nВведите текст: ")
+        if text == "exit":
+            break
+        pl.process(text)
+    except EOFError:
+        print("exit")
+        break
 
 print("bye :]")
 # Представляем текст в виде вектора признаков

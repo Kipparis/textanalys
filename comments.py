@@ -212,15 +212,6 @@ class Comments:
         # from utils import Watcher следить за прогрессом
         Comments.stupid_comments = ''
 
-        reg = r'\S+{n}\S+'
-        # Перенести этот компайл над всеми комментами, а внутри использовать готовый
-        Comment.useless_ns = re.compile(reg)
-        reg = r'\S+,\S+'
-        Comment.split_comma = re.compile(reg)
-
-        reg = r'.+\..+'
-        Comment.dot_in_center = re.compile(reg) # Точка посередине фичи
-
         wt = Watcher(len(self.comments))
         for comm in self.comments:
             wt.display_load(self.comments.index(comm), "making vector")

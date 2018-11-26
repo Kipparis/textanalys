@@ -43,7 +43,6 @@ class GamesSpider(CrawlSpider):
             LxmlLinkExtractor(
                 restrict_css=(
                     'div#search_result_container',
-
                 ),
                 allow=(r'.*/app/.*')
             ),

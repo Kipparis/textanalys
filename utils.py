@@ -71,14 +71,19 @@ def clear_some_sht(feature):
             isChanged = False
 
     # проверяем такие случаи как text.text    text{n}text    text,text    text?!"'tetxt ( вроде можно создать регурярку используя [] для задания множествас) 
-    stupid_symbol = re.compile(r'\S+([.,\-()!?"\']|\{n\})+\S+')
-    string_symb = ".,-()!\"?\'"
+    stupid_symbol = re.compile(r'\S+([.,\-()!:?"\']|\{n\})+\S+')
+    only_numb = re.compile(r'\A[1-9]+\Z')
+    string_symb = ".,-:()!\"?\'"
     symbols = list(string_symb)
     symbols.append('{n}')
+
+    if len(only_numb.findall(feature)) != 0:
+        return None
 
     if len(stupid_symbol.findall(output)) != 0:
         for symb in symbols:
             if symb in output:
+                # TODO: заканчивание предложения - удаляем, также чекаем на фичу из одних цифр
                 output = output.split(symb)[0] + '||||' + output.split(symb)[-1].strip()
     else:
         for symb in symbols:
@@ -90,7 +95,7 @@ def clear_some_sht(feature):
         code = ord(letter)
         if letter == "|":
             continue
-        elif not (((code >= 1040) and (code <= 1104)) or ((code >= 48) and (code <= 58))):
+        elif not (((code >= 1040) and (code <= 1104)) or ((code >= 48) and (code <= 58)) or code == 32):
             return None
     return output
 
