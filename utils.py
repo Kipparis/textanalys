@@ -88,6 +88,9 @@ def clear_some_sht(feature):
     else:
         for symb in symbols:
             if symb in output:
+                # TODO: Создать список removable symb 
+                if symb == '.' or symb == '!' or symb == ':' or symb == '?':
+                    output = output.split
                 output = output.replace(symb, '').strip()
 
     # Если там присутствуют английские или какие то ебучие буквы, ремуваем

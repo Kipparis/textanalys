@@ -53,7 +53,7 @@ def clear_some_sht(feature):
 
     # проверяем такие случаи как text.text    text{n}text    text,text    text?!"'tetxt ( вроде можно создать регурярку используя [] для задания множествас) 
     stupid_symbol = re.compile(r'\S+([.,\-()!?"\']|\{n\})+\S+')
-    string_symb = ".,-()!\"?\'"
+    string_symb = ".,-:()!\"?\'"
     symbols = list(string_symb)
     symbols.append('{n}')
 
