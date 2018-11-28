@@ -94,7 +94,7 @@ class GamesSpider(CrawlSpider):
         output = ""
         
         # Используем регулярное выражение для получения только полных комментариев
-        review_boxes = selector.xpath("//div[re:test(@class, '\Areview_box+\s\Z')]")
+        review_boxes = selector.xpath("//div[re:test(@class, '\Areview_box\s*\Z')]")
         for review in review_boxes:
             output += "\n=======================\n"
 
